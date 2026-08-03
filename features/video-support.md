@@ -1,23 +1,101 @@
-# Video Support
+# Video Support  
+## Full Multimedia NSFW Detection & Preview
 
-NSFW Manager can analyse video files in addition to images by extracting and scoring individual frames.
+NSFW Manager includes advanced video detection capabilities, allowing the application to analyze, preview, and classify sensitive content inside video files.
 
-## Supported Formats
+Video support was introduced in **[v2.0.1](ca://s?q=Open_v2.0.1_release_notes)** and expanded in **[v2.0.3](ca://s?q=Open_v2.0.3_release_notes)**.
 
-<!-- List of supported video container formats and codecs. -->
+---
 
-## How Frame Extraction Works
+## 🎯 Purpose
 
-<!-- High-level description of the frame sampling strategy (interval, keyframes, etc.). -->
+Video support ensures:
+- Accurate NSFW detection inside videos  
+- Fast preview with GPU decoding  
+- Unified workflow with image detection  
+- Full integration with cache, quarantine, and properties panel  
 
-## Interpreting Video Results
+---
 
-<!-- How the per-frame scores are aggregated into a single file-level result. -->
+# 🎥 Supported Formats
 
-## Performance Considerations
+- MP4  
+- MOV  
+- MKV  
+- AVI  
+- WEBM  
 
-<!-- Impact of video scanning on CPU and memory; recommended settings for large libraries. -->
+Unsupported codecs fall back to CPU decoding.
 
-## Enabling and Disabling Video Support
+---
 
-<!-- How to toggle video scanning in the application settings. -->
+# 🚀 Detection Pipeline
+
+## **1. Frame Extraction**
+- Extracts frames at configurable intervals  
+- Uses ffmpeg backend  
+- Generates thumbnails  
+- Handles corrupted frames gracefully  
+
+## **2. Engine Inference**
+- ONNX models applied to extracted frames  
+- Multi-engine support (int8, fp16, full)  
+- Score aggregation per video  
+
+## **3. GPU Acceleration (d3d11va)**
+- Hardware decoding  
+- Automatic fallback to CPU  
+- Significant performance boost  
+
+---
+
+# 🖥 Video Preview
+
+The preview panel includes:
+- Embedded video player  
+- Seek bar  
+- Frame thumbnails  
+- Async loading  
+- Metadata display (codec, duration, resolution)
+
+Related documentation:  
+**[Properties Panel](ca://s?q=Open_properties_panel)**
+
+---
+
+# 🧪 Cache Integration
+
+Video detection results and thumbnails are cached:
+- Instant re-scan  
+- Engine-aware caching  
+- Threshold-aware caching  
+- MD5 validation (optional)
+
+Related documentation:  
+**[Cache System](ca://s?q=Show_SQLite_schema)**
+
+---
+
+# 📦 Version History
+
+### **v2.0.3**
+- Cached thumbnails  
+- Improved preview stability  
+- Right-click actions extended to videos  
+
+### **v2.0.2**
+- Stability improvements  
+- Documentation added  
+
+### **v2.0.1**
+- Video detection engine introduced  
+- GPU decoding added  
+- Video preview panel created  
+
+---
+
+# 📌 Summary
+
+Video support transforms NSFW Manager into a full multimedia detection tool, capable of analyzing both images and videos with high accuracy and performance.
+
+---
