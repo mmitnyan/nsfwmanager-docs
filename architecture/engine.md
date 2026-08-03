@@ -1,191 +1,117 @@
-# Detection Engines  
-## Understanding NSFW Manager’s AI Models and Performance Profiles
+# Detection Engines
+## Understanding the AI Models Available in NSFW Manager
 
-NSFW Manager includes multiple AI detection engines, each with different performance characteristics, accuracy levels, and hardware requirements. This document explains how each engine works, how fast it scans, and how to choose the right model for your workflow.
-
----
-
-## 📌 Overview
-
-NSFW Manager provides two categories of engines:
-
-### **1. NSFW Manager Engines (Commercial)**
-These engines are built into the application and fully licensed for commercial use.
-
-### **2. Optional Engines (GPLv3)**
-These engines are available for users who want additional detection styles but must be installed separately due to GPLv3 licensing.
-
-All engines return:
-
-- a **score** between `0.01` and `1.0`  
-- a **reason label** describing the detected content  
-- consistent output formats across the UI  
+NSFW Manager includes multiple AI detection engines, each designed with a different balance of speed, accuracy, and hardware requirements. This page explains what each engine does, when to choose it, and why the differences matter in practice.
 
 ---
 
-# ⚡ NSFW Manager Engines (Commercial)
+## How Detection Engines Work
 
-These engines are ordered from **fastest to slowest**.
+When you scan a file, NSFW Manager passes it to the selected AI engine. The engine analyzes the visual content and returns:
 
-## 1. **int8 – Fast – “The Laid‑Back One”**  
-**Hardware:** CPU or GPU  
-**Speed:** Fastest  
-**Accuracy:** Good  
-**Best for:** Large batches, quick scans, general detection
+- A **score** between 0.0 and 1.0 representing how confident the AI is that the content is NSFW
+- A **label** describing what type of content was detected (for example: suggestive, explicit, or safe)
 
-This engine uses 8‑bit quantization for maximum speed.  
-It is ideal for users who want fast results with minimal resource usage.
+This score is compared against your configured threshold. Files at or above the threshold appear in your results.
+
+Different engines are trained differently, use different model architectures, and produce different score distributions. Choosing the right engine affects both the quality of detections and how quickly your scans complete.
 
 ---
 
-## 2. **fp16 – Balanced – “The Just Right”**  
-**Hardware:** GPU only  
-**Speed:** Medium  
-**Accuracy:** Higher than int8  
-**Best for:** Users with strong GPUs, balanced speed/accuracy
+## The Four Engines
 
-This engine uses half‑precision floating point (FP16).  
-It requires GPU acceleration and is unavailable when “Force CPU” is enabled.
+### The Just Perfect (int8)
 
----
+**Technical variant:** int8  
+**Hardware required:** CPU or GPU  
+**Bundled:** Yes — included with NSFW Manager, no download needed  
+**Speed:** Fastest
 
-## 3. **full – Maximum – “The Nit Picker”**  
-**Hardware:** CPU or GPU  
-**Speed:** Slowest  
-**Accuracy:** Highest  
-**Best for:** Maximum precision, detailed analysis
+This is the default engine. It uses 8-bit quantization, which reduces the model's precision slightly in exchange for much faster inference and lower memory usage. For NSFW detection, this trade-off is rarely noticeable in practice — the content either is or isn't explicit, and the reduced precision does not affect that judgment.
 
-This engine uses full‑precision weights and performs the most thorough analysis.  
-It is slower but provides the most accurate results.
+**Why choose it:** For most users and most collections, this engine is the right choice. It is fast, runs on any hardware (including older CPUs), and produces reliable results without requiring any additional setup. Start here.
+
+**When to consider another engine:** If you are building a curated archive where borderline cases matter — content that might score 0.45 or 0.55 — the int8 model's slightly reduced sensitivity to ambiguous content may cause it to miss some borderline files that a more precise model would catch.
 
 ---
 
-# 🟥 Optional Engines (GPLv3)
+### The Laid-Back One (fp16)
 
-These engines must be installed separately due to GPLv3 licensing.  
-They are not bundled with NSFW Manager.
+**Technical variant:** fp16  
+**Hardware required:** GPU only  
+**Bundled:** No — must be downloaded from Configuration → Engines  
+**Speed:** Medium
 
-## 1. **ifnude – Fast – “The Rebel”**  
-**Hardware:** CPU or GPU  
-**Speed:** Fast  
-**Accuracy:** High for exposed‑body detection  
-**Specialization:** Nudity classification with detailed anatomical labels
+This engine uses 16-bit floating-point precision. It is more precise than the int8 model and produces slightly higher-accuracy results. However, it requires a dedicated GPU — it cannot run on CPU. If GPU use is disabled or no supported GPU is detected, NSFW Manager will warn you and switch to a compatible engine.
 
-## 2. **ifnude – Default – “The Rebel”**  
-Same model, different configuration.  
-Provides more conservative detection thresholds.
+**Why choose it:** If you have a dedicated GPU and want slightly better accuracy without the slowness of the onnx model, this is a good middle option. It is faster than onnx on GPU hardware and more accurate than int8.
+
+**When not to use it:** On a machine without a dedicated GPU, this engine is unavailable. Do not select it if you see a "Force CPU" warning in the Configuration → Engines panel.
 
 ---
 
-# 🧠 CPU vs GPU Behavior
+### The Nit Picker (onnx)
 
-Performance varies depending on hardware:
+**Technical variant:** onnx  
+**Hardware required:** CPU or GPU  
+**Bundled:** No — must be downloaded from Configuration → Engines  
+**Speed:** Slowest
 
-### CPU
-- Surprisingly fast for int8 and full models  
-- More consistent across different systems  
-- Default mode (to avoid GPU‑related support issues)
+This engine uses full-precision weights and performs the most thorough analysis of the three built-in engines. It catches more borderline content and is less likely to miss a file that a faster model might give a marginal score.
 
-### GPU
-- Required for fp16  
-- Faster on modern NVIDIA/AMD cards  
-- May be slower on low‑end or integrated GPUs  
-- Can outperform CPU depending on model and content
+**Why choose it:** For collections where completeness matters — forensic review, compliance audits, building a definitively clean archive. If you are willing to accept a longer scan in exchange for fewer missed detections, this is the right engine.
 
-Users can control CPU/GPU behavior in the **Diagnostics** tab:
-
-- **Force CPU for photos** (enabled by default)  
-- **Force CPU for videos** (enabled by default)
-
-Disabling these options enables GPU acceleration.
+**When the slower speed is acceptable:** On smaller collections (under a few thousand files), the speed difference between int8 and onnx may be small enough to not matter. On large collections, the difference will be significant.
 
 ---
 
-# 🏷 Detection Labels
+### The Rebel (ifnude)
 
-### NSFW Manager Engines (int8 / fp16 / full)
-- **Pornography**  
-- **Suggestive**  
-- **Hentai**  
-- **Drawings**  
-- **Safe**
+**Technical variant:** ifnude (external engine)  
+**Hardware required:** CPU or GPU  
+**Bundled:** No — installed separately via your Python environment (pip install ifnude)  
+**License:** GPLv3 (not included with NSFW Manager due to licensing)
 
-These labels are consistent across all commercial engines.
+This engine comes from an independent open-source project and works differently from the three built-in engines. Rather than returning a single "NSFW score," it returns separate confidence values for specific types of anatomical exposure — for example, exposed chest, exposed buttocks, or explicit nudity — with a label describing each.
 
-### ifnude (GPLv3)
-- Exposed breast (F)  
-- Exposed chest (M)  
-- Exposed buttocks  
-- Exposed genitalia (F)  
-- Exposed genitalia (M)
+**Why the difference matters:** The built-in engines (int8, fp16, onnx) are deliberately binary — they classify content as either NSFW or safe, with scores clustered above 0.85 for clearly explicit content and below 0.20 for clearly safe content. This makes them fast and easy to use but less useful for nuanced decisions.
 
-These labels are more anatomically specific.
+The Rebel engine produces distributed scores across the full 0.0–1.0 range, making threshold tuning much more meaningful. A user who considers exposed shoulders acceptable but exposed breasts unacceptable can tune the threshold and label filters to reflect exactly that distinction.
+
+**Why it requires separate installation:** The ifnude library is licensed under GPLv3. NSFW Manager uses a commercial licence that is not compatible with bundling GPLv3 code. You can install it alongside NSFW Manager if you choose to use it, but it must be installed independently.
+
+**When to choose it:** When you need fine-grained classification and are willing to install an additional library. Particularly useful for moderation workflows where different types of content require different handling.
 
 ---
 
-# 🎯 Choosing the Right Engine
+## Score Distributions: Why Threshold Tuning Works Differently Per Engine
 
-### **Fastest scans**
-Use **int8**  
-Ideal for large folders, quick detection, or repeated scans.  
-Produces very binary results: either clearly NSFW or clearly safe.
+Understanding how each engine distributes scores helps you choose the right threshold:
 
-### **Balanced speed and accuracy**
-Use **fp16**  
-Requires GPU acceleration.  
-More accurate than int8, but still produces mostly high‑confidence NSFW scores.
+**The Just Perfect (int8), The Laid-Back One (fp16), The Nit Picker (onnx):** These engines tend to produce high scores (above 0.85) for clearly NSFW content and low scores (below 0.20) for clearly safe content. There are relatively few scores in the middle range. This means threshold adjustments between 0.30 and 0.70 usually produce the same results — the files that are flagged don't change much in that range.
 
-### **Maximum accuracy**
-Use **full**  
-Best for detailed analysis or sensitive environments.  
-Still binary in behavior: NSFW detections typically appear above 0.85.
+**The Rebel (ifnude):** Scores are distributed across the full range. Many files will score between 0.40 and 0.80. Here, the threshold makes a significant difference — moving it from 0.50 to 0.60 may exclude a meaningful category of content.
 
-### **Most granular classification**
-Use **ifnude**  
-Requires external installation (GPLv3).  
-Provides detailed anatomical labels and a wide score distribution.  
-Allows users to set custom thresholds (e.g., 0.63) depending on personal criteria.  
-Best for nuanced or borderline cases where user judgment is required.
-
-
-Among all available engines, **ifnude** provides the most detailed and granular classification. It is capable of distinguishing specific anatomical exposure categories such as exposed chest, exposed breast, exposed buttocks, and exposed genitalia. This level of detail allows users to define their own threshold for what they consider “NSFW.”
-
-For example, many users find that a threshold around **0.63** provides a good balance between sensitivity and accuracy. This flexibility is important because definitions of nudity vary widely: some users consider a visible navel to be inappropriate, while others only classify explicit exposure of genitalia as NSFW. With ifnude, users can fine‑tune the detection threshold to match their personal or organizational criteria.
-
-In contrast, the three built‑in NSFW Manager engines (int8, fp16, full) are intentionally more binary in their behavior. They tend to classify content as either clearly NSFW or clearly safe, with very few borderline scores. Most NSFW detections from these engines appear above **0.85**, and images below that range are typically considered safe. This makes them fast and reliable for general detection, but less suitable for users who need fine‑grained control.
-
-If you require the ability to make nuanced decisions based on subtle differences in content, **ifnude (“The Rebel”)** is the recommended engine.
-
+See [Detection Threshold](./detection-threshold.md) for guidance on tuning.
 
 ---
 
-# 📁 Log Locations
+## Automatic Fallback
 
-Engine initialization and performance events may appear in:
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-
-These logs help diagnose:
-
-- engine loading failures  
-- GPU initialization issues  
-- performance bottlenecks  
-- fallback to CPU mode  
+If the engine you configured at last launch is no longer available when you start NSFW Manager (for example, you deleted the downloaded model file, or the ifnude package was uninstalled), the application automatically switches to the best available engine and shows a warning. You do not need to manually reconfigure.
 
 ---
 
-# 📌 Summary
+## Downloading Engines
 
-NSFW Manager provides multiple engines to match different performance and accuracy needs:
+The fp16 and onnx models can be downloaded from **Configuration → Engines**. A progress dialog shows the download percentage, speed, and remaining data. You can cancel the download at any time.
 
-- **int8** → fastest  
-- **fp16** → balanced  
-- **full** → most accurate  
-- **ifnude** → detailed nudity detection (GPLv3)
-
-Users can fine‑tune performance using CPU/GPU settings, file format filters, and cache options.
+Model files are stored in your user profile. Once downloaded, they are available permanently until you remove them.
 
 ---
 
+## Related Pages
+
+- [Detection Threshold](./detection-threshold.md) — how to tune sensitivity per engine
+- [GPU Acceleration](../troubleshooting/performance.md#gpu) — when GPU helps and when it does not
+- [Diagnostics](../ui/ConfigurationPanel.md#diagnostic-tab) — checking which engine and GPU are active

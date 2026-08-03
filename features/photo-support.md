@@ -1,125 +1,93 @@
-# Photo Support  
-## Complete Image Support Specification  
-### NSFW Manager — Formats, Limits, Scaling, Metadata & Engine Behavior
+# Photo Support
+## Supported Formats, Size Limits, and Detection Behavior
 
-NSFW Manager includes a fully‑featured image detection pipeline capable of handling a wide range of formats, sizes, resolutions, metadata structures, and scaling rules.  
-This document describes **every supported format**, **every size limit**, **every scaling rule**, **every fallback mechanism**, and **every advanced behavior** of the photo subsystem.
+NSFW Manager scans a broad range of image formats. This page covers every supported format, the file-size limit setting, the junk-file exclusion filter, and the specific behaviors for animated and Apple-format images.
 
 ---
 
-# 📁 Supported Image Formats (Complete List)
+## Supported Image Formats
 
-NSFW Manager supports **all major image formats**, plus several niche or legacy formats.
+NSFW Manager supports the following formats:
 
-## Fully Supported Formats
-- JPEG / JPG  
-- PNG  
-- BMP  
-- GIF (first frame only)  
-- WEBP  
-- TIFF (single page)  
-- ICO  
-- HEIC  
-- HEIF  
-- AVIF  
-- PPM / PGM / PBM  
-- TGA  
-- DDS (DirectDraw Surface)  
-- PSD (flattened preview)  
-- EXR (OpenEXR, flattened)  
-- HDR (Radiance HDR)
+**Standard formats**
+JPEG (`.jpg`, `.jpeg`), PNG (`.png`), BMP (`.bmp`), GIF (`.gif`), TIFF (`.tif`, `.tiff`), WebP (`.webp`), ICO (`.ico`)
 
-## Partially Supported Formats
-- TIFF multi‑page → first page only  
-- GIF animated → first frame only  
-- PSD multi-layer → flattened preview only  
-- EXR multi-layer → flattened preview only  
+**Advanced and raw-style formats**
+HEIC (`.heic`), HEIF (`.heif`), AVIF (`.avif`), DDS (`.dds`)
 
-## Unsupported Formats (Clear Error Message)
-- RAW camera formats (CR2, NEF, ARW, RAF, ORF, DNG)  
-- SVG (vector)  
-- EPS (PostScript)  
-- PDF (not an image format)
+**Specialist formats**
+JPEG 2000 (`.jp2`, `.j2k`, `.jpf`, `.jpx`), portable bitmap family (`.ppm`, `.pgm`, `.pbm`)
+
+All enabled formats are shown as checkboxes in **Configuration → Detection**. You can disable individual formats to skip file types you do not need to scan — for example, disabling `.ico` if you are not scanning application directories.
 
 ---
 
-# 🖼 Maximum File Size & Resolution Handling
+## Animated Images (GIF, WebP)
 
-NSFW Manager includes a robust scaling system to handle extremely large images.
+For animated GIF and animated WebP files, NSFW Manager analyzes only the **first frame**. Subsequent frames are not examined.
 
-## Default Maximum File Size
-- **200 MB** per image  
-- Configurable in Settings → Detection → Max Image Size  
-- **0 = illimité** (no limit)
-
-## Default Maximum Resolution
-- **32,768 × 32,768 px**  
-- Configurable  
-- **0 = illimité**
-
-
-
-# 🧪 Engine Compatibility
-
-All image formats are processed through the ONNX pipeline.
-
-## Supported Engines
-- int8 (fastest)  
-- fp16 (GPU accelerated)  
-- full (highest accuracy)  
-- ifnude (external engine)
-
-## Fallback Logic
-If GPU unavailable:
-- fp16 → always GPU  
-- full → CPU fallback  
-- int8 → CPU fallback 
-
-If image cannot be decoded:
-- Clear error message  
-- No crash  
-- Cache entry not created  
+**Why:** Analyzing every frame of an animated image is equivalent to treating it as a video. Frame-by-frame analysis of animation would add significant scan time with little practical benefit, since the first frame is typically the most representative. If you need per-frame analysis of animated content, enabling video scanning covers common video formats, and video scanning uses configurable frame sampling.
 
 ---
 
-# 🧩 Metadata Extraction
+## HEIC, HEIF, and AVIF (Apple Device Formats)
 
-NSFW Manager extracts:
-- Dimensions  
-- File size  
-- Creation timestamp  
-- Modification timestamp  
-- EXIF orientation  
-- EXIF camera metadata  
-- Color profile (sRGB, AdobeRGB, DisplayP3)
+HEIC, HEIF, and AVIF are modern compressed image formats used by iPhones, iPads, and recent Android cameras. These formats require an **optional plugin** (`pillow-heif`) that is not included by default.
 
-Metadata is displayed in the **Properties Panel**  
-→ **[Open Properties Panel](ca://s?q=Open_properties_panel)**
+If the plugin is not installed, these file types are skipped silently during scans. The Configuration → Detection panel shows "(pillow-heif not installed)" next to these formats if the plugin is absent.
+
+**Why the plugin is optional:** The codec required to decode Apple's HEIC/HEIF format is not distributed as part of standard Python imaging libraries. Users who regularly work with iPhone photo libraries can install the plugin separately; users who never encounter these formats have no need for it.
+
+**How to enable it:** Install the plugin via your Python environment. Once installed, HEIC/HEIF/AVIF detection becomes available automatically without any application restart.
 
 ---
 
-# 🧱 Scaling Configuration (Advanced)
+## Maximum File Size
 
-Located in:  
-Settings → Detection → Image Scaling  
-→ **[Open Configuration Panel](ca://s?q=Open_configuration_panel)**
+By default, NSFW Manager skips any image file larger than **100 MB**. Files above this limit are not scanned and do not appear in results.
 
-## Options
-- Max resolution (default: 32768 px)  
-- Max file size (default: 200 MB)  
-- Scaling mode  
-  - Lanczos  
-  - Bicubic  
-  - Nearest (fastest)  
-- Memory cap  
-  - Default: 512 MB per image  
-  - **0 = illimité**
+**Configuration:** Configuration → Detection → Maximum file size to scan. Set to `0` to remove the limit entirely.
 
-## Behavior
-- Scaling applies before engine inference  
-- Scaling does NOT affect cached thumbnails  
-- Scaling does NOT modify original file  
-- Scaling does NOT affect quarantine behavior  
+**Why the default is 100 MB:**
+Photos above 100 MB are uncommon outside of specialized professional workflows — high-end DSLR RAW exports, layered composites, or panoramic stitches. These files take disproportionately long to load and decode, and they are rarely the content you are trying to screen. Capping at 100 MB keeps scan times predictable for typical collections.
+
+**Why you might raise or remove the limit:**
+- You are a photographer scanning a RAW archive where individual files regularly exceed 100 MB
+- You are working with a professional media library and need complete coverage regardless of file size
+- Set the limit to `0` for no restriction, or to a higher value (e.g., 500 MB) for a practical upper bound
+
+**Why you might lower the limit:**
+- Scanning a phone sync folder where photos are typically under 10 MB — a 20 MB limit would catch all real photos while skipping any accidentally included large files
+
+---
+
+## Junk File Exclusion
+
+NSFW Manager includes a **junk file exclusion** filter that is enabled by default. It automatically skips the following system-generated files:
+
+- `Thumbs.db` and `ehthumbs.db` — Windows thumbnail caches
+- `.DS_Store` — macOS folder metadata files
+- `desktop.ini` — Windows folder configuration files
+- Apple double files (`._<filename>`) — macOS resource forks written to non-macOS drives
+
+**Why it is on by default:** These files are created automatically by operating systems and are never photos. Scanning them wastes processing time and can produce false detection errors since their binary content is not image data. Most users scanning mixed-OS network shares or drives that have been used with macOS will encounter these files frequently.
+
+**When to disable it:** You have a specific reason to scan these files. This is extremely uncommon in practice.
+
+---
+
+## What Happens When a File Cannot Be Decoded
+
+If a file matches a supported extension but cannot be opened or decoded (corrupted file, truncated download, unrecognized variant), it is recorded as a **corrupted file** rather than a detection or a safe file. A "Corrupted files" section appears in the main results list, hidden by default.
+
+You can make this section visible in **Configuration → Detection → Show Corrupted Files section**. This is useful when diagnosing why certain files are not appearing in detection results — if they show up as corrupted, the issue is with the files themselves rather than with NSFW Manager.
+
+---
+
+## Detection in the Properties Panel
+
+For any scanned image, the [Properties Panel](../ui/properties-panel.md) shows the file's detection score, the label assigned by the active engine, the threshold that was active at scan time, and whether the result came from cache or a live scan. You can also see the image dimensions and file size there.
+
 
 ---
 
@@ -142,7 +110,7 @@ Image detection results are stored in SQLite:
 - MD5 strict mode (optional)
 
 Related documentation:  
-→ **[Show SQLite Schema](ca://s?q=Show_SQLite_schema)**
+→ **Show SQLite Schema**
 
 ---
 
@@ -156,8 +124,8 @@ Image support integrates with:
 - Send to Directory  
 
 Related documentation:  
-→ **[Open Quarantine Feature](ca://s?q=Open_quarantine_feature)**  
-→ **[Open Delete Feature](ca://s?q=Open_delete_feature)**
+→ **Open Quarantine Feature**  
+→ **Open Delete Feature**
 
 ---
 

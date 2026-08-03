@@ -1,209 +1,71 @@
-# MSI Per‑User Installation  
-## How NSFW Manager Installs Without Administrator Privileges
+# Installation Model: No Administrator Rights Required
+## How NSFW Manager Installs Cleanly on Any Windows User Account
 
-This document explains how NSFW Manager uses a **per‑user MSI installation model**, why this approach was chosen, and how it improves compatibility, reliability, and user experience on modern Windows systems. It also describes the differences between per‑user and per‑machine MSI packages and how this affects installation behavior.
-
----
-
-## 📌 Overview
-
-NSFW Manager installs using a **per‑user MSI**.  
-This means:
-
-- No administrator rights required  
-- No UAC elevation prompt  
-- Silent installation works correctly  
-- All files are stored in user‑writable directories  
-- No privileged registry keys are used  
-- No system‑wide changes are made  
-
-This installation model is ideal for desktop applications that do not require system‑level components.
+NSFW Manager uses a **per-user MSI** installer. This means the entire installation happens inside your own user profile — no system-wide changes, no administrator access needed, no UAC prompt.
 
 ---
 
-# 🟦 Why Per‑User MSI?
+## Why Per-User Installation
 
-Earlier versions of NSFW Manager used a **per‑machine MSI**, which caused:
+Earlier versions of NSFW Manager shipped with a traditional per-machine installer. This caused problems for many users:
 
-- Windows Installer error **1925** (insufficient privileges)  
-- Windows Installer error **1303** (cannot write to Program Files)  
-- Silent install failures (`msiexec /quiet`)  
-- UAC elevation prompts  
-- Installation failures during the `InstallFinalize` phase  
+- Windows Installer errors 1925 and 1303 appeared when the user did not have administrator rights
+- Silent installation (msiexec /quiet) failed
+- UAC elevation prompts appeared even on machines where the user was a local admin
 
-These issues occurred because per‑machine MSIs require administrator rights and write to protected locations.
-
-Switching to a **per‑user MSI** eliminates all of these problems.
+A per-user installer eliminates all of these problems because it never tries to write to protected system locations. The application files go into your user profile, which you always have full write access to.
 
 ---
 
-# 🟩 Installation Paths (Per‑User)
+## Where Files Are Stored
 
-NSFW Manager installs entirely under the user profile:
+| Content | Location |
+|---|---|
+| Application files | %LOCALAPPDATA%\NsfwManager\ |
+| Configuration and licence | %APPDATA%\NsfwManager\ |
+| Logs | %APPDATA%\NsfwManager\logs\ |
+| Start Menu shortcuts | %APPDATA%\Microsoft\Windows\Start Menu\Programs\NsfwManager\ |
 
-### Application files
-%LOCALAPPDATA%\NsfwManager\
-
-
-### Configuration, logs, and runtime data
-%APPDATA%\Roaming\NsfwManager\
-%LOCALAPPDATA%\NsfwManager\logs\
-
-
-### Quarantine directory
-%LOCALAPPDATA%\NsfwManager\Quarantine\
-
-
-### Default move‑to directory
-%USERPROFILE%\Documents\MyPrivatePictures\
-
-
-These locations are **always writable** by the current user, ensuring reliable installation and operation.
+All of these locations are in your user profile and are always writable without elevated privileges.
 
 ---
 
-# 🟦 No Administrator Rights Required
+## Benefits for Different Users
 
-Per‑user MSI avoids:
+**Home users:** Install without being prompted for a password or admin approval. Updates install the same way.
 
-- Writing to `C:\Program Files\`  
-- Writing to `C:\ProgramData\`  
-- Writing to HKLM registry keys  
-- Creating system‑wide shortcuts  
-- Running privileged CustomActions  
+**Corporate / managed machines:** Per-user install works on locked-down machines where users cannot install to C:\Program Files\. IT administrators do not need to pre-authorize the installation.
 
-Because the installer never touches protected areas, Windows does not require elevation.
-
-### Benefits
-
-- Works in corporate environments  
-- Works on locked‑down machines  
-- Works under standard user accounts  
-- Works with silent installs  
-- No UAC prompt  
-- No admin password required  
+**Multi-user machines:** Each user has their own copy of the application with their own configuration, licence, and quarantine data. One user's settings do not affect another's.
 
 ---
 
-# 🟧 Silent Installation Support
+## Silent Installation
 
-Silent installation is fully supported:
-msiexec /i nsfwmanager.msi /quiet /L*V install.log
+NSFW Manager supports fully silent installation for automated deployments:
 
+`
+msiexec /i nsfwmanager-<version>-x64.msi /quiet /L*V install.log
+`
 
 Expected behavior:
+- No UAC prompt
+- No dialog boxes
+- Installation completes silently
+- Log file is written to install.log
 
-- No UAC prompt  
-- No privilege errors  
-- Installation completes successfully  
-- Log ends with **Return value 1** (success)
-
-This is essential for:
-
-- automated deployments  
-- enterprise environments  
-- script‑based installations  
-- software management tools
+This is useful for software management tools, IT deployment scripts, or organizations rolling NSFW Manager out to multiple machines.
 
 ---
 
-# 🟦 No Privileged CustomActions
+## Uninstallation
 
-The MSI contains **no deferred CustomActions** that require elevation.
+Uninstalling also requires no administrator rights. You can uninstall NSFW Manager from Windows Settings → Apps, or by re-running the MSI installer and choosing Remove.
 
-This avoids:
-
-- rollback failures  
-- commit‑phase crashes  
-- Windows Installer error **1603**  
-- permission issues during file operations  
-
-All actions performed by the installer are safe for per‑user context.
+Your configuration, scan cache, quarantine data, and licence file are not removed by the uninstaller. If you want to remove those as well, delete the %APPDATA%\NsfwManager\ and %LOCALAPPDATA%\NsfwManager\ folders manually after uninstalling.
 
 ---
 
-# 🟩 Start Menu Shortcuts (Per‑User)
+## Troubleshooting Installer Errors
 
-Shortcuts are created under:
-%APPDATA%\Microsoft\Windows\Start Menu\Programs\NsfwManager\
-
-
-This ensures:
-
-- no access to `C:\ProgramData\Microsoft\Windows\Start Menu\`  
-- no elevation required  
-- shortcuts are visible only to the current user  
-- compatibility with Windows 10 and 11
-
----
-
-# 🟦 Registry Usage
-
-NSFW Manager uses only **HKCU** (Current User) registry keys when needed.
-
-It does **not** write to:
-
-- HKLM  
-- system‑wide COM registrations  
-- privileged installer keys  
-
-This keeps the installation lightweight and safe.
-
----
-
-# 🟩 Uninstallation
-
-Uninstallation also requires **no administrator rights**.
-
-Windows removes:
-
-- the application directory under `%LOCALAPPDATA%`  
-- user configuration under `%APPDATA%`  
-- Start Menu shortcuts under `%APPDATA%`  
-- MSI registration under HKCU  
-
-No privileged cleanup is needed.
-
----
-
-# 📁 Log Locations
-
-Installation‑related issues can be diagnosed using:
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-
-These logs help identify:
-
-- directory access issues  
-- MSI initialization problems  
-- engine loading errors  
-- video decoding failures  
-
----
-
-# 📌 Summary
-
-NSFW Manager uses a **per‑user MSI** to ensure:
-
-- no administrator rights required  
-- no UAC elevation  
-- no Program Files access  
-- no privileged registry writes  
-- no deferred CustomActions  
-- full silent install support  
-- reliable installation on all Windows environments  
-
-This installation model is stable, secure, and fully compatible with modern Windows systems.
-
----
-
-
-
-
-
-
-
-
-
+If you see **Windows Installer error 1925 or 1303**, see [Windows Installer Errors 1925 and 1303](../troubleshooting/windows-errors-1925-1303.md).

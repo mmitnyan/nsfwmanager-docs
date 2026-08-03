@@ -1,188 +1,96 @@
-# License Security  
-## How NSFW Manager Protects License Keys and Validates User Access
+# Licence Security
+## How NSFW Manager Protects Licence Keys and Validates User Access
 
-This document explains how NSFW Manager handles license validation, key security, machine binding, and demo‑mode restrictions. It describes the client‑side and server‑side mechanisms used to ensure that only legitimate users can unlock the full functionality of the application.
-
----
-
-## 📌 Overview
-
-NSFW Manager uses a secure, server‑validated licensing system based on:
-
-- HMAC‑derived license keys  
-- Email‑bound license generation  
-- Optional machine binding  
-- Encrypted API communication  
-- Server‑side verification of license status  
-- Graceful fallback to demo mode  
-
-The system is designed to be simple for users while preventing unauthorized use.
+This document explains how NSFW Manager handles licence validation, what mechanisms protect against tampering, and what restrictions apply in trial mode.
 
 ---
 
-# 🔐 License Key Structure
+## How Licence Validation Works
 
-A license key is generated from the user’s email using a secure hashing method.  
-This ensures:
+When NSFW Manager starts, it sends a validation request to the licence server at https://api.nsfwmanager.com/api/license/validate.php. The request includes:
 
-- each key is unique  
-- keys cannot be guessed  
-- keys cannot be forged  
-- keys cannot be reused across accounts  
+- Your email address
+- Your licence key
+- A hashed hardware identifier (machine ID)
+- The application's major version number
 
-The key is **not** reversible and does not expose the user’s email.
+The server checks that the key is valid, active, not expired, and bound to the correct machine. It returns the licence status and expiry date.
 
----
-
-# 🌐 Server‑Side Validation
-
-When a user enters their email and license key, NSFW Manager sends a validation request to:
-https://api.nsfwmanager.com/api/license/validate.php
-
-
-### The server checks:
-
-- whether the email exists  
-- whether the key matches the stored value  
-- whether the license is active  
-- whether the license is expired  
-- whether the license is bound to a machine  
-- whether the machine ID matches (if applicable)  
-- the license plan (trial, pro, lifetime)
-
-### The server returns:
-
-- `valid` (true/false)  
-- `reason` (if invalid)  
-- `plan`  
-- `expires_at`  
-- `machine_id`  
-- `first_activation`  
-
-All responses are JSON and transmitted over HTTPS.
+This request is the **only** outbound network connection NSFW Manager makes. No file names, file content, scan results, or folder paths are ever transmitted.
 
 ---
 
-# 🖥 Machine Binding (Optional)
+## Locally Cached Licence
 
-Some licenses may be bound to a specific machine.  
-When machine binding is enabled:
+After a successful validation, the licence data is cached locally in your user profile. NSFW Manager uses this cache on subsequent startups to avoid requiring a network connection on every launch.
 
-1. NSFW Manager computes a **SHA‑256 hardware identifier**  
-2. The identifier is sent to the server  
-3. The server stores the machine ID on first activation  
-4. Future validations must match the stored machine ID  
-
-### Benefits
-
-- prevents sharing of license keys  
-- ensures one license = one machine  
-- protects commercial licenses  
-- allows controlled activation behavior  
-
-Machine binding is optional and depends on the license plan.
+The cached file is protected by an HMAC-SHA256 signature. Any manual modification to the file breaks the signature, and NSFW Manager falls back to trial mode.
 
 ---
 
-# 🔒 Security Considerations
+## Machine Binding
 
-### No Local Trust  
-The application does **not** trust local license files.  
-All validation is performed server‑side.
+On first activation, the application computes a hardware fingerprint using a SHA-256 hash of machine-specific identifiers. This fingerprint is sent to the server and stored against your licence.
 
-### No Offline Activation  
-Offline activation is intentionally not supported to prevent:
+Every subsequent validation checks that the machine fingerprint matches the stored value. If it does not match (for example, if someone copies the licence file to a different machine), validation fails and trial mode applies.
 
-- key sharing  
-- reverse engineering  
-- offline cracking  
-- unauthorized redistribution  
-
-### No Sensitive Data Stored Locally  
-Only minimal metadata is stored locally:
-
-- email  
-- license key  
-- validation status  
-
-No passwords or server secrets are stored on the client.
+To transfer your licence to a new machine, use the web portal to unregister the current machine before activating on the new one.
 
 ---
 
-# 🧪 Demo Mode Restrictions
+## Anti-Tamper Protections
 
-When no valid license is present, NSFW Manager operates in **demo mode**.
+**HMAC signature on local cache:** The cached licence file cannot be modified without invalidating the signature. Editing the file to change the expiry date or trial status causes the check to fail immediately.
 
-### Demo mode allows:
+**Machine ID verification in offline mode:** Even when offline, the machine ID stored in the cached licence is verified against the current hardware. Copying a licence file between machines is detected.
 
-- scanning  
-- previewing  
-- quarantine management  
-- restoring quarantined files  
-- rescanning directories  
-
-### Demo mode limits:
-
-Users can perform **five actions** per session:
-
-- delete  
-- move  
-- quarantine  
-
-After five actions:
-
-- destructive actions are disabled  
-- scanning remains fully available  
-- quarantine viewing remains available  
-- restarting the application resets the counter  
-
-This ensures users can evaluate the software without unrestricted use.
+**Anti-clock-rollback:** If the system clock is moved back by more than 2 hours, NSFW Manager detects the discrepancy and reverts to trial mode. This prevents extending grace periods or trial resets by manipulating system time.
 
 ---
 
-# 🔁 License Retrieval
+## Trial Mode Restrictions
 
-The License panel allows users to:
+When no valid licence is present, NSFW Manager operates in **trial (demo) mode**.
 
-- enter email + password to retrieve a license  
-- enter email + key directly  
-- open the purchase page on the official website  
-- view current license status  
-- refresh license validation  
+**Trial mode allows:**
+- Unlimited scanning
+- Full preview of results
+- Full Configuration Panel access
+- Quarantine Manager viewer
 
-All communication uses HTTPS.
-
----
-
-# 📁 Log Locations
-
-License validation events may appear in:
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-
-These logs help diagnose:
-
-- invalid key errors  
-- expired license warnings  
-- machine mismatch issues  
-- server communication failures  
+**Trial mode limits:**
+- File actions (delete, move, quarantine, open directory) are limited to **5 per session**
+- Once the limit is reached, action buttons are greyed out until the next application restart
+- The counter resets on every launch
 
 ---
 
-# 📌 Summary
+## Offline Access for Activated Users
 
-NSFW Manager’s licensing system provides:
+There is an important distinction between two offline scenarios:
 
-- secure HMAC‑based key generation  
-- server‑side validation  
-- optional machine binding  
-- encrypted communication  
-- demo‑mode restrictions  
-- safe per‑user storage  
+**Offline activation (new, never-activated key):** Not supported. First activation requires an internet connection to register the machine and verify the key against the server.
 
-This ensures that legitimate users can unlock the full application while preventing unauthorized use.
+**Offline use (already activated):** Fully supported. If the licence server is unreachable at startup, NSFW Manager uses the locally cached licence data and grants full access for up to 30 days since the last successful online check. A warning is shown but functionality is not restricted.
+
+This design ensures that legitimate paying users are never locked out by temporary network issues, travel, or server maintenance.
 
 ---
 
+## Licence States at Startup
+
+| State | Behaviour |
+|---|---|
+| Valid, server reachable | Full access; local cache updated |
+| Valid, server unreachable | Full access via cached data (up to 30 days) |
+| Grace period (expired 1–15 days ago) | Full access; renewal reminder shown |
+| Expired more than 15 days ago | Trial mode (5 actions/session) |
+| Revoked or suspended | Trial mode; contact support message shown |
+
+---
+
+## Related Pages
+
+- [Licence and Activation](../getting-started/licence.md) — user-facing activation guide
+- [SSL and Secure Communication](./ssl.md) — how the validation request is protected in transit
+- [Privacy](./privacy.md) — complete list of what is and is not transmitted

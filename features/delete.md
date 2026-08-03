@@ -1,246 +1,88 @@
-# Delete & Permanent Delete  
-## Safe Removal of Sensitive Files  
-### NSFW Manager — Full Specification of Deletion Workflows
+# Delete & Permanent Delete
+## Safe Removal of Sensitive Files
 
-NSFW Manager provides two deletion modes designed for safety, reliability, and full control over sensitive files:
-
-- **Recycle Bin Delete** (safe, reversible)  
-- **Permanent Delete** (irreversible, secure)
-
-This document describes **every detail** of the deletion subsystem, including file handling, fallback logic, cache updates, quarantine integration, Windows API behavior, and error handling.
+NSFW Manager provides two ways to remove detected files: **Recycle Bin delete** (safe and reversible) and **Permanent delete** (immediate and irreversible). The right choice depends on how confident you are in the detections and how you prefer to manage your workflow.
 
 ---
 
-# 🗑 Recycle Bin Delete  
-## Safe, reversible deletion using Windows Shell API
+## Recycle Bin Delete (Default)
 
-Recycle Bin deletion uses the Windows Shell API to move files to the system Recycle Bin.
+When you delete a file using the Recycle Bin mode, the file is moved to the Windows Recycle Bin. It stays there until you empty the Recycle Bin manually, and it can be restored at any time from Explorer before then.
 
-### Behavior
-- File is moved to the Recycle Bin  
-- Operation is **reversible**  
-- Windows keeps metadata (original path, deletion date)  
-- Works for both **images** and **videos**  
-- Works for files in **Quarantine** and **Main Screen**  
-- Cache entry is **invalidated** immediately  
+**Why this is the default:** AI detection is not infallible. A first-pass scan at a moderate threshold will often flag some legitimate images alongside actual NSFW content. Using the Recycle Bin ensures you have a safety net — if you accidentally delete a photo you wanted to keep, you can recover it.
 
-### Advantages
-- Safest deletion method  
-- Allows undo  
-- Prevents accidental data loss  
-- Recommended for most users  
+**When to use Recycle Bin:**
+- First-time scan of any folder you have not reviewed before
+- Scanning a large mixed collection where false positives are expected
+- Any time you value recoverability over immediate finality
 
-### Limitations
-- Recycle Bin must be enabled on the drive  
-- Network drives may not support Recycle Bin  
-- Very large files may bypass Recycle Bin depending on Windows settings  
+**Limitations:**
+- Files move to the Recycle Bin only if the drive has one (local NTFS drives). Network drives and some external drives do not support Recycle Bin; files on those drives will be deleted permanently even in this mode.
+- Very large files may bypass the Recycle Bin depending on your Windows settings (if the Recycle Bin size limit is set lower than the file size).
 
 ---
 
-# ❌ Permanent Delete  
-## Irreversible deletion using secure file removal
+## Permanent Delete
 
-Permanent Delete bypasses the Recycle Bin and removes the file immediately.
+Permanent delete removes the file immediately, bypassing the Recycle Bin entirely. The file is gone as soon as the operation completes and cannot be recovered through normal means.
 
-### Behavior
-- File is deleted using Windows secure delete API  
-- No recovery possible  
-- Cache entry is removed  
-- Quarantine metadata is removed  
-- Preview panel closes automatically  
-- File disappears from the result list instantly  
+**When to use Permanent delete:**
+- You have already reviewed the detected files and are certain they should be removed
+- You are running a recurring cleanup of a folder you scan regularly — you know the detection is reliable for that content
+- You are working on a drive without Recycle Bin support and want consistent behavior
+- Disk space is a concern and you do not want deleted files occupying the Recycle Bin
 
-### Use Cases
-- Sensitive content  
-- Unwanted files  
-- Cleanup operations  
-- Automated workflows  
-
-### Safety
-- Requires confirmation  
-- Cannot be undone  
-- Clear warning message  
+**Why confirmation is required by default:** Even in a reviewed workflow, permanent deletion is not reversible. The confirmation dialog is a last checkpoint. If you are doing bulk operations on many files and have already reviewed them, you can disable the confirmation in Configuration → General → Confirm before delete.
 
 ---
 
-# 🧩 Integration with Other Components
+## Configuring the Delete Mode
 
-## 1. **Quarantine**
-Deleting from Quarantine:
-- Removes file from quarantine directory  
-- Removes original path metadata  
-- Updates logs  
-- Updates cache  
-- Refreshes Quarantine Manager list  
+The delete mode is configured globally in **Configuration → General → File Deletion**. It applies to all delete actions throughout the application — from the main screen, the right-click menu, and the Properties Panel.
 
-Related:  
-**[Quarantine](ca://s?q=Open_quarantine_feature)**
+You choose once per session which behavior you want. There is no per-file override.
 
 ---
 
-## 2. **Properties Panel**
-Deletion from Properties Panel:
-- Closes panel automatically  
-- Updates main screen  
-- Updates cache  
-- Updates thumbnails  
+## Confirmation Dialog
 
-Related:  
-**[Properties Panel](ca://s?q=Open_properties_panel)**
+By default, NSFW Manager shows a confirmation dialog before any deletion. The dialog text changes based on the mode:
 
----
+- **Recycle Bin mode:** "Send X file(s) to the Recycle Bin?"
+- **Permanent mode:** "Permanently delete X file(s)? This cannot be undone."
 
-## 3. **Main Screen**
-Deletion from Main Screen:
-- Removes item from result list  
-- Updates scan statistics  
-- Updates cache  
-- Refreshes preview  
+**Why it is on by default:** Accidental deletions are easy to trigger, especially with keyboard shortcuts. The confirmation adds one extra click that prevents mistakes.
 
-Related:  
-**[Main Screen](ca://s?q=Open_main_screen)**
+**When to disable it:** If you are in a verified workflow (you have reviewed the files before acting), the confirmation dialog adds friction without benefit. Disable it in Configuration → General → Confirm before delete.
 
 ---
 
-## 4. **Cache System**
-Deletion triggers:
-- Removal of cached engine results  
-- Removal of cached thumbnails  
-- Removal of MD5 entry  
-- Removal of metadata  
+## Completion Popup
 
-Related:  
-**[Cache System](ca://s?q=Show_SQLite_schema)**
+After a successful deletion, NSFW Manager shows a brief confirmation popup ("X file(s) deleted"). You can disable this in Configuration → General → Show completion popup.
+
+**When to keep it:** Useful for small batches where you want confirmation that the operation succeeded.
+
+**When to disable it:** If you are processing large numbers of files in sequence, the popup appearing after every action becomes disruptive.
 
 ---
 
-# 🔧 File Handling & Fallback Logic
+## Multi-Selection and Batch Delete
 
-NSFW Manager includes robust fallback logic to handle problematic files.
-
-## Locked Files
-If a file is locked by another process:
-- Clear error message  
-- Suggest closing the app using the file  
-- Retry option  
-- No crash  
-
-## Missing Files
-If the file was moved externally:
-- Cache entry removed  
-- Warning displayed  
-- Item removed from list  
-
-## Permission Errors
-If Windows denies access:
-- Error message  
-- Suggest running as admin (rare)  
-- No crash  
-
-## Network Drives
-Behavior depends on Windows:
-- Recycle Bin may not exist  
-- Permanent Delete used automatically  
-- Clear message shown  
+You can select multiple files in the results list (using Shift-click or Ctrl-click) and delete them all at once. The confirmation dialog shows the total count. This is faster than deleting one by one for large batches.
 
 ---
 
-# 🖼 Image & Video Delete Behavior
-
-Deletion works identically for:
-- Images (JPG, PNG, BMP, TIFF, WEBP, etc.)  
-- Videos (MP4, MOV, MKV, AVI, WEBM, etc.)
-
-### Video-specific behavior
-- Preview player stops immediately  
-- Thumbnail cache removed  
-- Video metadata removed  
-
-### Image-specific behavior
-- High-resolution preview closed  
-- EXIF metadata removed from cache  
-
----
-
-# 🧪 Batch Delete Behavior
-
-When deleting multiple files:
-- Operations run asynchronously  
-- UI remains responsive  
-- Each deletion updates cache  
-- Errors are isolated per file  
-- Progress indicator shown  
-
-Batch delete is optimized for:
-- Large folders  
-- High-volume scans  
-- Automated cleanup  
-
----
-
-# ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 | Action | Shortcut |
-|-------|----------|
-| Delete (Recycle Bin) | **Delete** |
-
-
-Related:  
-**[Shortcuts](ca://s?q=Open_shortcuts_feature)**
+|---|---|
+| Delete (Recycle Bin or Permanent based on your setting) | `Delete` |
+| Permanent delete (regardless of setting) | `Shift+Delete` |
 
 ---
 
-# 🛡 Safety Features
+## Related Pages
 
-NSFW Manager includes multiple safety layers:
-
-- Confirmation dialog for permanent delete  
-- Clear warnings for irreversible actions  
-- No silent permanent delete  
-- No background deletion without user action  
-- No deletion without preview availability  
-- No deletion of files outside user-selected folders  
-
----
-
-# 📦 Version History
-
-### v2.0.3
-- Improved permanent delete workflow  
-- Better error messages  
-- Faster cache invalidation  
-- Preview auto-close  
-- Right-click delete added  
-
-### v2.0.2
-- Stability improvements  
-- Better handling of missing files  
-
-### v2.0.1
-- Unified delete for images & videos  
-
-### v2.0.0
-- New delete engine  
-- Quarantine-aware deletion  
-- Cache-aware deletion  
-
-### v1.0.0
-- Initial delete/permanent delete options  
-
----
-
-# 📌 Summary
-
-NSFW Manager provides a robust, safe, and reliable deletion system:
-
-- Recycle Bin delete (safe, reversible)  
-- Permanent delete (secure, irreversible)  
-- Full integration with preview, cache, quarantine, and main screen  
-- Advanced fallback logic  
-- Clear error handling  
-- Optimized batch deletion  
-- Full support for images and videos  
-
-This is the **complete** specification for deletion behavior in NSFW Manager.
-
----
+- [Quarantine](./quarantine.md) — for a reversible, structured holding area before deciding to delete
+- [Move to Folder](./move-to-folder.md) — for archiving files to a different location instead of deleting

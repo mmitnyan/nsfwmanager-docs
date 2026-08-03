@@ -1,177 +1,79 @@
-# Properties Panel  
-## Detailed File Information & Media Preview
+# Properties Panel
+## Detailed File Information and Per-File Actions
 
-The **Properties Panel** provides an in-depth view of any scanned file.  
-It centralizes metadata, engine results, preview capabilities, and contextual actions in a single, easy-to-access interface.
+The **Properties Panel** gives you an in-depth view of any individual file in your scan results: full metadata, a preview, the detection result, and every action you can take on that file — all in one place.
 
-The panel is accessible from:
-- Right‑click → **Properties**
-- Double‑click (if configured)
-- Keyboard shortcut **Ctrl+P**
-
-This feature was introduced in **[v2.0.3](ca://s?q=Open_v2.0.3_release_notes)** as part of the UX expansion.
+Open it by clicking any file in the results list, pressing Ctrl+P, double-clicking a file (if configured), or selecting Properties from the right-click menu.
 
 ---
 
-## 🎯 Purpose
+## Why the Properties Panel Exists
 
-The Properties Panel allows users to:
-- Inspect file metadata (size, timestamps, dimensions)
-- View detection results per engine/model
-- Preview images and videos
-- Understand why a file was flagged
-- Perform contextual actions (open folder, move, delete)
-- Compare cached vs. real-time detection values
+The main results list is optimized for scanning through many files quickly — it shows filename, score, and label at a glance. The Properties Panel is optimized for making a decision about a single file:
 
-It is designed to be fast, responsive, and fully asynchronous.
+- You can see the full-size preview before deciding to delete or quarantine
+- You see why the file was flagged (the engine label, not just a score)
+- You see the file path, size, and dimensions to confirm you have the right file
+- All actions are available in one click without going back to the list
 
----
-
-# 🧩 Panel Layout
-
-The Properties Panel is divided into four main sections:
+This matters most when a file's score is borderline — say 0.55 with a threshold of 0.50. Looking at the preview in the panel helps you decide whether the detection is accurate or a false positive.
 
 ---
 
-## 1. **File Metadata**
+## File Metadata
 
-Displays essential information about the file:
-
-- Full path  
-- File name  
-- Size (bytes, KB, MB)  
-- Last modified timestamp  
-- Creation timestamp  
-- Dimensions (for images)  
-- Duration, codec, resolution (for videos)  
-- MD5 hash (if enabled)
-
-This metadata is also used by the **SQLite scan cache**  
-→ see **[Cache System](ca://s?q=Show_SQLite_schema)**.
+The top section shows:
+- Full file path
+- File name
+- File size
+- Last modified date
+- Image dimensions (width × height) for images
+- Duration, codec, and resolution for videos
 
 ---
 
-## 2. **Preview Area**
+## Preview Area
 
-### 🖼 Image Preview
-- High‑resolution display  
-- Async loading (prevents UI freeze)  
-- Zoom and fit-to-window behavior  
-- Supports large images (50–80 MB)
+**Image files:** The preview displays the image in a fit-to-panel view. Loading is asynchronous — the panel opens immediately and the image appears once decoded. Large images (high-resolution DSLR photos, HEIC from phones) load in the background without blocking the interface.
 
-### 🎥 Video Preview
-- Embedded video player  
-- Frame extraction  
-- Seek bar  
-- GPU decoding (d3d11va) with CPU fallback  
-- Thumbnail generation
+**Video files:** The panel shows the specific frame that triggered the highest detection score — the "most flagged" moment in the video. The frame is decoded in the background.
 
-Video preview was introduced in **[v2.0.1](ca://s?q=Open_v2.0.1_release_notes)**.
+**Why the panel shows the highest-score frame for videos:** This is the most useful frame to review when deciding whether to act on the detection. Showing a random frame or the first frame would often show content that looks fine, making it harder to verify the detection. The highest-score frame gives you the best evidence for the detection decision.
 
 ---
 
-## 3. **Engine Results**
+## Detection Results
 
-Shows detection results for each engine/model:
+Shows the engine that analyzed this file, the model variant used, the detection score, the threshold that was active, and the label assigned by the engine.
 
-- Engine name (int8, fp16, full, ifnude)
-- Model variant
-- Score
-- Label
-- Threshold used
-- Cached vs. real-time comparison
-- Timestamp of cached result
-
-This section is directly powered by the SQLite table `engine_results`.
-
-If multiple engines are enabled, results are stacked vertically.
+If the result came from cache, the panel indicates this and shows when the cached result was recorded. This helps you assess whether the cached result is still relevant (for example, if the file has since been modified, or if your threshold has changed).
 
 ---
 
-## 4. **Actions**
+## Actions
 
-Contextual actions available directly from the panel:
+All file actions are available directly from the Properties Panel:
 
-- **Open file location**
-- **Move to Directory** (Ctrl+T)
-- **Move to Folder**
-- **Quarantine**
-- **Delete** / **Permanent Delete**
-- **Copy metadata**
-- **Copy MD5**
-- **Refresh preview**
-
-These actions mirror the right‑click menu introduced in **v2.0.3**.
+- **Open file location** — opens the folder in Windows Explorer
+- **Send to Directory (Ctrl+T)** — move to a custom folder of your choice
+- **Send to Default Folder** — move to your configured default folder
+- **Send to Quarantine** — move to quarantine (see [Quarantine](../features/quarantine.md))
+- **Delete / Permanent Delete** — remove the file (see [Delete](../features/delete.md))
+- **Copy metadata** (Ctrl+C) — copy file path and detection details to clipboard
+- **Copy MD5** (Ctrl+Shift+C) — copy the file's MD5 hash if computed
+- **Refresh preview** (F5) — re-decode the preview
 
 ---
 
-# ⚙️ Behavior & Performance
+## Asynchronous Loading Behaviour
 
-### **Asynchronous Loading**
-The panel loads preview and metadata asynchronously:
-- UI remains responsive
-- Switching files cancels previous tasks
-- Large images and videos do not freeze the interface
-
-### **Cache Integration**
-If a cached result exists:
-- It is displayed instantly
-- Threshold and engine validation ensure correctness
-- MD5 validation (optional) ensures integrity
-
-### **Error Handling**
-The panel gracefully handles:
-- Corrupted images
-- Unsupported video codecs
-- Missing files
-- Locked files
-- Cache inconsistencies
+The Properties Panel never freezes the interface. When you click rapidly between files in the results list, each file's decode task is started and cancelled if you move to the next before it completes. Only the currently selected file's preview will decode to completion.
 
 ---
 
-# 🧭 Keyboard Shortcuts
+## Related Pages
 
-| Action | Shortcut |
-|-------|----------|
-| Open Properties | **Ctrl+P** |
-| Send to Directory | **Ctrl+T** |
-| Close panel | Esc |
-| Refresh preview | F5 |
-
-Shortcuts are configurable in future versions (planned for v2.1.x).
-
----
-
-# 📦 Version History
-
-### **v2.0.3**
-- Properties Panel introduced  
-- Full metadata display  
-- Video preview integration  
-- Engine result comparison  
-- Right‑click integration  
-- Configurable double‑click action  
-
-### **v2.0.1**
-- Video preview backend created  
-- GPU decoding added  
-- Thumbnail extraction implemented  
-
-### **v2.0.0**
-- Early metadata extraction  
-- Basic preview panel (images only)
-
----
-
-# 📌 Summary
-
-The Properties Panel is a central part of NSFW Manager’s UX.  
-It provides a complete, detailed, and fast view of any scanned file, combining metadata, preview, engine results, and contextual actions in a single interface.
-
-It is one of the most appreciated features introduced in **v2.0.3**, and serves as a foundation for future enhancements such as:
-- system tray quick‑view  
-- batch properties  
-- metadata export  
-- advanced engine comparison
-
----
+- [Main Screen](./main-screen.md) — the results list that feeds into this panel
+- [Quarantine](../features/quarantine.md) — the quarantine action available from this panel
+- [Delete](../features/delete.md) — delete mode and confirmation settings
+- [Background Scanning and Responsive UI](../architecture/async-loading.md) — why loading is async

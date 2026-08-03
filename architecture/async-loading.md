@@ -1,118 +1,59 @@
-# Asynchronous Image Loading  
-## Improving UI Responsiveness When Previewing Large Files
+# Background Scanning and Responsive UI
+## Why NSFW Manager Never Freezes During a Scan
 
-This document explains how NSFW Manager uses asynchronous image loading to prevent UI freezes when previewing large photos or video thumbnails. The feature was introduced to improve responsiveness, especially when dealing with high‑resolution images or slow storage devices.
-
----
-
-## 📌 Overview
-
-Image previewing can be expensive on Windows systems, especially when:
-
-- opening very large photos (20–80 MB)
-- decoding high‑resolution images
-- loading thumbnails from videos
-- reading files from slow HDDs or network drives
-
-To avoid UI blocking, NSFW Manager uses an **asynchronous loading pipeline** that decodes images in the background while keeping the interface responsive.
+Scanning large folders and displaying previews of high-resolution images are computationally expensive operations. NSFW Manager is designed so that neither of these operations ever blocks the user interface — you can review, act on, and navigate results while a scan is still running.
 
 ---
 
-# ⚡ Why Asynchronous Loading Was Needed
+## How the Scan Runs in the Background
 
-Before async loading, users could experience:
+When you start a scan, NSFW Manager launches the detection work in a separate background thread. The main interface remains fully responsive throughout:
 
-- temporary UI freezes  
-- stuttering when selecting files  
-- slow preview rendering  
-- delayed interaction with the file list  
+- Results appear in the list as they are detected — you do not wait for the full scan to complete
+- You can click on detected files to preview them while scanning continues
+- You can quarantine, delete, or move files while more are being analyzed
+- The progress bar and current file indicator update in real time
+- You can cancel the scan at any time via the Cancel button; the scan stops cleanly after the current file finishes
 
-These issues were caused by synchronous image decoding, which blocked the main UI thread.
-
-Async loading solves this by offloading heavy work to background workers.
-
----
-
-# 🧩 How Asynchronous Loading Works
-
-When a user selects a file:
-
-1. The UI immediately updates the preview area with a placeholder  
-2. A background worker begins decoding the image  
-3. The UI remains fully responsive  
-4. Once decoding is complete, the preview is updated  
-5. If the user switches to another file before decoding finishes, the previous task is discarded
-
-This ensures that:
-
-- the UI never freezes  
-- preview updates feel instant  
-- large images do not block interaction  
-- video thumbnails load smoothly
+This design means a scan of 50,000 files is no more disruptive to your workflow than a scan of 50 files.
 
 ---
 
-# 🖼 Large Image Handling
+## How Preview Loading Works
 
-Async loading is especially beneficial for:
+When you click on a file in the results list, the Properties Panel displays a preview. For large files — high-resolution photos from a DSLR, HEIC images from a phone, or video frames — loading and decoding the preview can take a moment.
 
-- DSLR/RAW‑style images  
-- high‑resolution JPEG/PNG files  
-- HEIC/AVIF images from modern phones  
-- large WebP or GIF files  
-- video frames extracted during detection
+NSFW Manager loads previews asynchronously:
 
-Even when decoding takes time, the interface remains responsive.
+1. The Properties Panel opens immediately with a placeholder
+2. Image decoding runs in the background
+3. The preview updates when decoding is complete
+4. If you click a different file before the current preview finishes loading, the previous decode task is cancelled and the new one starts
 
----
-
-# 🎥 Video Thumbnail Loading
-
-When previewing a video:
-
-- NSFW Manager displays the frame that triggered the detection score  
-- The frame is decoded asynchronously  
-- The UI remains responsive while the frame loads  
-- If the user clicks “Hide Image,” the preview is replaced immediately
-
-Async loading prevents video frame extraction from blocking the UI.
+This means you can quickly scroll through many detected files in the results list without experiencing any freezes or delays.
 
 ---
 
-# 🧪 User Experience Improvements
+## Why This Matters for Large Collections
 
-With asynchronous loading:
+Without background processing, scanning 5,000 photos might lock the interface for several minutes, preventing you from doing anything else in the application. With background scanning:
 
-- Selecting files feels instant  
-- Scrolling through results is smoother  
-- Previewing large files no longer causes stutters  
-- Users can interact with the interface while images decode  
-- The application feels faster and more modern
-
-This significantly improves usability on systems with slower CPUs or HDDs.
+- You can start reviewing and acting on early results while the scan processes the rest of the folder
+- You can adjust settings or check the configuration panel without stopping the scan
+- The application feels responsive even on slower hardware or when scanning from a network drive
 
 ---
 
-# 📁 Log Locations
+## Video Preview Loading
 
-Async loading events may appear in:
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
+For video files, generating the preview frame also runs asynchronously. The frame shown in the Properties Panel is the frame that triggered the highest detection score. Extracting and decoding it happens in the background, so the panel opens immediately and the frame appears once it is ready.
 
-
-These logs help diagnose:
-
-- image decoding errors  
-- unsupported formats  
-- slow file access  
-- video frame extraction issues  
+If GPU decoding is enabled, video frames load noticeably faster.
 
 ---
 
-# 📌 Summary
+## Related Pages
 
-Asynchronous loading ensures that NSFW Manager remains responsive even when previewing large or complex media files. By decoding images and video frames in the background, the application avoids UI freezes and provides a smoother, more reliable user experience.
-
----
-
+- [Main Screen](../ui/main-screen.md) — the results list and action buttons
+- [Properties Panel](../ui/properties-panel.md) — preview and metadata display
+- [Video Support](../features/video-support.md) — frame extraction and GPU decoding

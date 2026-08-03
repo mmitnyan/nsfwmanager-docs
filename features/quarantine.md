@@ -1,199 +1,126 @@
-# Quarantine Mode  
-## Safe Isolation & Controlled Review of Sensitive Files
+# Quarantine
+## Safe Isolation and Controlled Review of Sensitive Files
 
-The **Quarantine** feature allows users to isolate detected sensitive files in a secure location, review them later, and restore or delete them safely.  
-It is designed to prevent accidental exposure, avoid surprises, and maintain full control over flagged content.
+The **Quarantine** feature moves flagged files to a secure, dedicated location where you can review them, restore them to their original path, or delete them — without those files being visible in normal folders while you decide.
 
-Quarantine is accessible from:
-- Right‑click → **Quarantine**
-- Action buttons in the main screen
-- Double‑click (if configured)
-- The dedicated **Quarantine Manager** panel
-
-Introduced in v1.0.0 and significantly expanded in **[v2.0.0](ca://s?q=Open_v2.0.0_release_notes)** and **[v2.0.3](ca://s?q=Open_v2.0.3_release_notes)**.
+Quarantine is the recommended first action for most workflows. It is reversible, organized, and keeps a complete record of everything that was moved.
 
 ---
 
-## 🎯 Purpose
+## Why Use Quarantine Instead of Deleting Directly
 
-Quarantine provides a safe workflow for:
-- Isolating sensitive or uncertain files  
-- Reviewing flagged content without deleting it  
-- Restoring files to their original location  
-- Keeping the main folders clean and “surprise‑free”  
-- Avoiding accidental exposure during browsing or sharing  
-- Preparing files for deletion or reorganization
+Detection is not perfect. AI models can flag artwork, medical images, swimwear photos, or other legitimate content as NSFW — especially at lower thresholds. If you delete immediately without reviewing, you may lose files you wanted to keep.
 
-It is one of the core pillars of NSFW Manager’s privacy‑first design.
+Quarantine solves this by creating a **review stage** between "flagged" and "deleted":
 
----
+1. Move flagged files to quarantine
+2. Open the Quarantine Manager to review them
+3. Restore any files that were false positives
+4. Delete the rest
 
-# 🧩 How Quarantine Works
-
-When a file is quarantined:
-
-1. It is **moved** to a secure quarantine directory.
-2. Its **original path** is stored in the database.
-3. The file becomes **hidden** from normal scans.
-4. The user can **preview**, **restore**, or **delete** it from the Quarantine Manager.
-5. A **log entry** is created for traceability.
-
-Quarantine is fully compatible with:
-- Image detection  
-- Video detection  
-- Multi‑engine results  
-- The **[Properties Panel](ca://s?q=Open_properties_panel)**  
-- The **[SQLite Cache](ca://s?q=Show_SQLite_schema)**
+This workflow means a mistake is always recoverable. For first-time scans of a large, unfamiliar collection, quarantine is the safest approach.
 
 ---
 
-# 📁 Quarantine Directory Structure
+## Why Use Quarantine Instead of Move to Folder
 
-Quarantined files are stored in:
-%APPDATA%/NsfwManager/Quarantine/
+Unlike [Move to Folder](./move-to-folder.md), quarantine stores full metadata for every file:
 
+- The original path the file came from
+- The detection score and label
+- The engine that flagged it
+- The exact timestamp of the quarantine action
 
-Inside this directory, NSFW Manager organizes files by:
-- Category (if enabled)
-- Session (optional)
-- Original extension
-
-This structure ensures:
-- No filename collisions  
-- Easy restore  
-- Predictable organization  
+This metadata enables one-click restore, a human-readable summary report, and a searchable per-session log. If you need to undo an entire batch or review what was moved two sessions ago, quarantine provides the tools to do that; a custom folder move does not.
 
 ---
 
-# 🧭 Quarantine Manager
+## How Quarantine Is Organized: Sessions and Categories
 
-The **Quarantine Manager** provides a dedicated interface to manage isolated files.
+Each time you quarantine files, NSFW Manager creates a new **timestamped session folder**. Sessions are independent: quarantining files tomorrow will not mix with what you quarantined today.
 
-### Features:
-- List of all quarantined files  
-- Preview panel (image/video)  
-- Restore button  
-- Permanent delete button  
-- File metadata  
-- Original path display  
-- Search and filtering  
-- Session-based grouping  
+Inside each session, files are organized into **category subfolders** based on the detection label:
 
-The preview system is asynchronous, identical to the main screen preview.
+| Subfolder | Contents |
+|---|---|
+| `explicit/` | Files labeled as explicit, nude, pornographic, or sexual |
+| `suggestive/` | Files labeled as suggestive, partial nudity, or underwear |
+| `unsafe/` | Files labeled as unsafe or inappropriate but not explicitly NSFW |
+| `unknown/` | Files whose label did not match any known category |
+| `errors/` | Files that could not be moved cleanly |
 
----
+**Why sessions:** A session is a complete, isolated record of one quarantine action. You can restore or delete an entire session at once. If you realize an entire scan was misconfigured (wrong threshold, wrong folder), you can undo it as a batch rather than file by file.
 
-# 🔄 Restore Workflow
+**Why categories:** Different categories typically require different decisions. You might be comfortable with suggestive images (swimwear, underwear) staying in your library, but want all explicit content removed. Category folders let you review one group at a time and make decisions at the category level rather than file by file.
 
-Restoring a file:
-- Moves it back to its original folder  
-- Recreates missing directories if needed  
-- Updates the cache  
-- Removes quarantine metadata  
-- Refreshes the main screen list  
-
-If the original folder no longer exists, NSFW Manager prompts the user to choose a new location.
+**Why the "organize by category" option:** In Configuration → Directories, you can disable category subfolder organization. When disabled, all files in a session are placed in a single flat folder. Use this if you prefer a simpler layout and always make decisions on individual files rather than by category.
 
 ---
 
-# 🗑 Delete Workflow
+## What Gets Stored in Each Session
 
-Deleting a quarantined file offers two options:
+Each session folder contains:
 
-### **Recycle Bin**
-- Safer  
-- Allows undo  
-- Recommended for most users
+- The moved files, organized into category subfolders
+- `session_metadata.json` — the engine name, model variant, and creation timestamp for the session
+- `quarantine_log.json` — a per-file record with original path, quarantine path, category, score, label, timestamp, and engine
+- `quarantine_report.txt` — a human-readable summary showing total files moved, broken down by category and by confidence level (high, medium, low)
 
-### **Permanent Delete**
-- Irreversible  
-- Useful for sensitive or unwanted content  
-- Requires confirmation
-
-Both workflows update:
-- Logs  
-- Cache  
-- Quarantine metadata  
+**Confidence levels:** High means the detection score was above 80%, Medium is 50–80%, and Low is below 50%. The report groups files by these tiers so you can see at a glance how many detections were high-confidence vs. borderline.
 
 ---
 
-# ⚙️ Settings Related to Quarantine
+## The Quarantine Manager
 
-Quarantine behavior is configurable in the **Settings** panel:
+Open the Quarantine Manager from the application menu to manage all quarantine sessions.
 
-- Organize by category  
-- Preserve folder structure  
-- Create log file  
-- Custom quarantine directory  
-- Double‑click action (Quarantine)  
-- Right‑click menu integration  
+The main list shows every session that still has files in it. Sessions that have been fully restored or deleted are automatically hidden from the list.
 
-See **[Settings](ca://s?q=Open_settings_panel)** for details.
+**Columns:** Session ID, date and time, number of files, folder path.
 
----
+**Session actions:**
+- **Open Folder** — open the session folder directly in Windows Explorer
+- **Detail** — view thumbnails of every file in the session, with its score, original path, quarantine date, and engine
+- **Restore** — move all files in the selected sessions back to their original paths. If the original folder no longer exists, it is recreated. If a file with the same name already exists at the destination, the restored file gets a `_restored_N` suffix to avoid overwriting anything.
+- **Delete** — permanently delete the entire session and all its files (with a confirmation dialog)
 
-# 🧪 Engine & Cache Interaction
-
-When a file is quarantined:
-- Its cached detection result remains stored  
-- It is excluded from future scans  
-- Engine results remain accessible in the **Properties Panel**  
-- MD5 validation ensures integrity  
-- Restore revalidates the cache entry
-
-This ensures consistent behavior across all engines.
+You can select multiple sessions at once for bulk restore or delete.
 
 ---
 
-# 🐞 Error Handling
+## The Quarantine Directory
 
-Quarantine gracefully handles:
-- Locked files  
-- Missing original directories  
-- Permission issues  
-- Corrupted files  
-- Duplicate filenames  
-- Cache inconsistencies  
+The quarantine directory is fully configurable in **Configuration → Directories**. You can set it to any local folder. The default is a location in your user profile.
 
-Clear error messages guide the user through recovery steps.
+The quarantine directory should be on the **same drive** as the files you are scanning, when possible. Moving files between drives works but is slower (the file must be copied then deleted rather than simply renamed).
 
 ---
 
-# 📦 Version History
+## Restoring Files
 
-### **v2.0.3**
-- Right‑click “Quarantine”  
-- Configurable double‑click action  
-- Improved restore reliability  
-- Better preview integration  
-- Session-based grouping  
+When you restore files from the Quarantine Manager:
 
-### **v2.0.2**
-- Stability improvements  
-- Better error messages  
-- Documentation added  
-
-### **v2.0.1**
-- Video preview support in Quarantine Manager  
-
-### **v2.0.0**
-- Major refactor of quarantine logic  
-- New Quarantine Manager  
-- Category-based organization  
-- Log file support  
-
-### **v1.0.0**
-- Initial quarantine feature  
-- Basic restore/delete workflow  
+- Each file is moved back to its **exact original path**
+- If the folder that contained it was deleted, NSFW Manager recreates it
+- If a file already exists at the destination with the same name, the restored file is saved with a suffix (`_restored_1`, `_restored_2`, etc.) so neither file is overwritten
+- After restoring all files in a session, the now-empty session folder is removed from the quarantine directory, and the session disappears from the Quarantine Manager list
 
 ---
 
-# 📌 Summary
+## Accessing Quarantine from the Main Screen
 
-Quarantine is a core feature of NSFW Manager, providing a safe, controlled environment for handling sensitive files.  
-It prevents accidental exposure, supports detailed review, and integrates seamlessly with the detection engines, preview system, and cache architecture.
+You can send files to quarantine from multiple places:
 
-It is one of the most important privacy‑focused features of the application.
+- Right-click → **Send to Quarantine**
+- The main action button (if quarantine is set as your default action in Configuration → Directories)
+- Double-click, if you have configured the double-click action to quarantine (Configuration → General)
+- Keyboard shortcut **Q** when a file is selected in the main results list
 
 ---
 
+## Related Pages
+
+- [Move to Folder](./move-to-folder.md) — for one-way moves without structured metadata
+- [Delete](./delete.md) — for permanent or Recycle Bin removal
+- [Detection Threshold](./detection-threshold.md) — for adjusting what gets flagged in the first place
+

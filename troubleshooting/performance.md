@@ -1,252 +1,87 @@
-# Performance Troubleshooting  
-## Improving Scan Speed, Engine Selection, and Overall Responsiveness
+# Performance Troubleshooting
+## Improving Scan Speed and Engine Responsiveness
 
-This document explains how NSFW Manager handles performance, how engine selection affects scan speed, and how configuration options influence photo and video processing. It also provides guidance for users experiencing slow scans, high CPU usage, or UI delays.
-
----
-
-## 📌 Overview
-
-NSFW Manager performs local analysis on photos and videos using optimized ONNX models and Python-based processing pipelines. Performance varies depending on:
-
-- the selected detection engine  
-- CPU vs GPU usage  
-- file formats and sizes  
-- video decoding backend  
-- enabled or disabled cache  
-- user configuration choices  
-
-This guide summarizes how each option affects performance and how to optimize the application for your system.
+This guide explains what factors affect NSFW Manager's scan speed and how to tune the application for your hardware and workflow.
 
 ---
 
-# ⚡ Engine Performance
+## Engine Selection
 
-The **Engine** tab contains the most impactful performance settings.
+The biggest single factor in scan speed is the choice of engine. In order from fastest to slowest:
 
-NSFW Manager provides multiple engines, ordered from **fastest to slowest**:
+1. **The Just Perfect (int8)** — fastest; runs on CPU or GPU; bundled by default
+2. **The Laid-Back One (fp16)** — medium speed; requires a dedicated GPU
+3. **The Nit Picker (onnx)** — slowest; most thorough; runs on CPU or GPU
+4. **The Rebel (ifnude)** — comparable to int8 in speed; requires separate installation
 
-### **NSFW Manager Engines (Commercial)**
-1. **int8 – Fast – “The Laid‑Back One”**  
-   - CPU or GPU  
-   - Fastest engine  
-   - Lower precision, ideal for large batches
-
-2. **fp16 – Balanced – “The Just Right”**  
-   - GPU only  
-   - Balanced speed and accuracy  
-   - Requires disabling “Force CPU” in Diagnostics
-
-3. **full – Maximum – “The Nit Picker”**  
-   - CPU or GPU  
-   - Highest accuracy  
-   - Slowest engine
-
-### **Optional Engines (GPLv3)**
-1. **ifnude – Fast – “The Rebel”**  
-2. **ifnude – Default – “The Rebel”**
-
-These engines are fast but GPLv3 and therefore optional.
-
-### Notes on CPU vs GPU
-- GPU is not always faster; performance depends on GPU quality.  
-- Some systems scan faster on CPU, especially with int8 or full models.  
-- fp16 requires GPU and is unavailable when “Force CPU” is enabled.
-
-### Detection Threshold
-Changing the threshold **does not affect scan speed**.
+For large collections where speed matters most, use The Just Perfect (int8). It is accurate enough for the vast majority of use cases.
 
 ---
 
-# 🖼 Photo Detection Performance
+## CPU vs GPU for Image Analysis
 
-The **Photo Detection** tab allows fine‑grained control over which image formats are scanned.
+Both Force CPU toggles are **on by default**. GPU is not always faster for image analysis — it depends on your hardware.
 
-### Supported Formats (20 total)
-`jpg bmp tiff ppm jp2 jpx heif jpeg gif webp pgm j2k dds avif png tif ico pbm jpf heih`
+**GPU helps when:**
+- You have a dedicated NVIDIA or AMD GPU from the last few years
+- You are scanning many large images in sequence
+- The GPU supports DirectML or CUDA
 
-### Performance Tips
-- Disabling formats reduces scan time.  
-- Excluding “scan‑irrelevant files” skips filenames starting with `.` (e.g., `.filename.jpg`).  
-- Large camera RAW‑style images (50–80 MB) take longer to decode.  
-- “Maximum file size to scan (MB)” can skip extremely large files:
-  - Default: **100 MB**
-  - Range: **0–2000 MB** (0 = no limit)
+**GPU may not help (or may be slower) when:**
+- You have an integrated GPU (Intel UHD, AMD Radeon integrated) — the overhead of passing data to the GPU may exceed the inference speedup
+- You are using an older GPU with limited compute capability
+- Your GPU is under thermal throttling (laptop with cooling limitations)
 
-This is useful when:
-- Phone photos are typically <10 MB  
-- DSLR/Canon/Nikon images are extremely large  
-- Users want to skip professional camera formats to speed up scanning
+**Recommendation:** Test both settings on your machine. Enable GPU (uncheck Force CPU for photos in Configuration → Engines), run a scan of a known folder, note the time, then re-enable Force CPU and compare. Use whichever is faster.
+
+To enable GPU for image analysis: Configuration → Engines → uncheck **Force CPU instead of GPU for photos**. The Diagnostic tab shows whether the GPU is actually being used.
 
 ---
 
-# 🎥 Video Detection Performance
+## GPU for Video Decoding
 
-The **Video Detection** tab mirrors the photo settings.
+GPU acceleration for video (d3d11va hardware decoding) tends to provide a larger speedup than GPU inference for images. Video decoding — converting compressed video to raw frames — is a task that GPU hardware decoders are specifically designed for and typically 5–10× faster than CPU decoding.
 
-### Supported Formats
-`mp4 mov mkv webm avi`
+To enable: Configuration → Engines → uncheck **Force CPU instead of GPU for videos**.
 
-All formats are enabled by default.
-
-### Video Exclusions
-Skips files starting with `.` (temporary or hidden files).
-
-### Codec Support
-- **OpenCV (default)**  
-  - Fastest  
-  - Falls back to FFmpeg automatically if decoding fails  
-- **Force FFmpeg for all videos**  
-  - More stable  
-  - Significantly slower  
-  - Recommended only for problematic video libraries
-
-### Video Parameters
-- **Maximum video size**  
-  - Default: **1000 MB**  
-  - Range: **0–10000 MB**  
-  - Larger videos take longer to decode
-
-- **Frames to sample per video**  
-  - Default: **10**  
-  - Range: **1–100**  
-  - More frames = slower scan  
-  - Fewer frames = faster but less thorough
+**Force FFmpeg option:** Configuration → Detection includes an option to force FFmpeg for all videos instead of defaulting to OpenCV. FFmpeg is more compatible with unusual codecs but noticeably slower. Only enable this if you are having decoding failures with specific video files. OpenCV with automatic fallback to FFmpeg is the right setting for most users.
 
 ---
 
-# ⚙️ Cache Performance
+## Scan Cache
 
-The **Cache** tab contains two options:
+The most dramatic performance improvement for repeated scans is enabling the scan cache. After the first full scan, every subsequent scan of the same folder skips already-analyzed files and completes in a fraction of the time.
 
-### **Enable scan cache**  
-- Disabled by default  
-- First scan is similar to normal scan  
-- Subsequent scans of the same directory are **extremely fast**  
-- Ideal for folders that are frequently updated (e.g., iPhone sync folders)
+Enable it in Configuration → Cache → Enable scan cache.
 
-### **Use MD5 verification**  
-- Disabled by default  
-- Ensures cached entries are valid  
-- Slightly slower on re‑scan due to MD5 hashing  
-- Recommended when files may change between scans
+See [Scan Cache](../features/scan-cache.md) for details and caveats.
 
 ---
 
-# 🛠 Diagnostic Options (CPU/GPU Control)
+## Image File Size Limit
 
-The **Diagnostic** tab contains two important toggles:
+Large image files (professional RAW exports, panoramic stitches) take significantly longer to decode than normal photos. If your collection includes very large files you do not need to screen, raise the maximum file size limit (Configuration → Detection → Maximum file size to scan).
 
-### **Force CPU instead of GPU for photos**  
-### **Force CPU instead of GPU for videos**
-
-Both are enabled by default to avoid GPU‑related support issues.
-
-Effects:
-- fp16 engine becomes unavailable unless GPU is enabled  
-- CPU engines may outperform GPU on low‑end or older GPUs  
-- GPU engines may outperform CPU on modern NVIDIA/AMD cards
+Alternatively, lower the limit to skip very large files entirely if they are not relevant to your use case. Default is 100 MB.
 
 ---
 
-# 📁 Directory Settings
+## Video Frame Count
 
-The **Directories** tab affects workflow speed, not scan speed.
+More frames per video = slower scan. The default is 10 frames. If you are scanning a large collection of videos and speed is the priority, reducing to 5 frames may be acceptable depending on your content.
 
-### Default Locations
-- **Scan Directory:** `<user>\Pictures`  
-- **Quarantine Directory:** `AppData\Local\NsfwManager\Quarantine`  
-- **Move Directory:** `<user>\Documents\MyPrivatePictures`
-
-### Default Action for Selected Files
-- Move to quarantine (default)  
-- Move to custom folder  
-
-Choosing the right default action reduces UI clicks and speeds up workflow.
+Configuration → Detection → Frames to sample per video.
 
 ---
 
-# 🧩 General Settings
+## Disabling Unneeded Formats
 
-### File Deletion
-- **Recycle Bin** (recoverable)  
-- **Permanent Deletion** (irreversible)
-
-### Confirmation Options
-- “Ask for confirmation before deleting file”  
-- “Show confirmation popup after file action”
-
-Disabling confirmations speeds up workflow for advanced users.
-
-### Double‑Click Action
-- Open Properties (default)  
-- Move to Default Folder  
-- Move to Directory  
-- Move to Quarantine  
-
-Customizing this improves productivity.
+If you only need to scan JPEG and PNG files, disabling all other formats in Configuration → Detection removes a small amount of overhead per file (format matching). The effect is minor but measurable on very large collections.
 
 ---
 
-# 🎨 Theme & Personality
+## Directory Location
 
-### Theme
-- Light  
-- Dark (default)
+Scanning files on a slow HDD is significantly slower than scanning from an SSD, especially for preview loading. If performance is critical and you are scanning from a mechanical drive, consider that the bottleneck may be storage I/O rather than CPU or GPU compute.
 
-### AI Personality Style
-- Funny (default)  
-- Professional  
-
-This affects UI presentation and engine naming, not performance.
-
----
-
-# 📊 Main Screen Performance Notes
-
-The main screen displays:
-
-- File list  
-- Score  
-- Reason  
-- Preview  
-- Statistics  
-- Actions (delete, move, open directory, quarantine management)
-
-Previewing extremely large images or videos may take longer depending on file size and codec.
-
----
-
-# 📁 Log Locations
-
-Logs can help diagnose performance issues:
-
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-
-These logs include:
-- decoding errors  
-- slow file warnings  
-- video thumbnail extraction issues  
-- engine initialization details  
-
----
-
-# 📌 Summary
-
-Performance depends on:
-
-- selected engine  
-- CPU vs GPU usage  
-- enabled formats  
-- file sizes  
-- video frame sampling  
-- cache settings  
-- codec backend  
-- system hardware  
-
-NSFW Manager provides extensive configuration options to tailor performance to your system and workflow.
-
----
+Network drives (NAS, SMB shares) add latency on top of I/O overhead. GPU and cache optimizations help less when the bottleneck is network throughput.

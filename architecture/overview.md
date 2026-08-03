@@ -1,253 +1,87 @@
-# Architecture Overview  
-## Internal Design of NSFW Manager
+# How NSFW Manager Processes Your Files
+## The Detection Pipeline from Folder to Results
 
-NSFW Manager is built as a modular desktop application designed for speed, reliability, and privacy. This document provides a high‑level overview of the internal architecture, including the detection pipeline, engine system, caching layer, UI components, video decoding, licensing, and MSI deployment model.
-
----
-
-## 📌 Core Principles
-
-NSFW Manager is designed around the following principles:
-
-- **Local processing** — all detection happens on the user’s machine  
-- **High performance** — optimized engines, caching, async preview  
-- **User privacy** — no images are uploaded or transmitted  
-- **Modularity** — engines, cache, UI, and video systems are independent  
-- **Stability** — CPU‑first design, GPU optional  
-- **Compatibility** — per‑user MSI, no admin rights required  
+This page explains what NSFW Manager does when you start a scan — from selecting a folder to displaying flagged results — in terms of what you observe and why each step is designed the way it is.
 
 ---
 
-# 🧠 Detection Pipeline
+## Step 1: Folder Selection and File Collection
 
-The detection pipeline is the core of NSFW Manager. It processes images and videos using ONNX models and returns a score and label.
+When you start a scan, NSFW Manager scans the selected folder **recursively** — it descends into every subfolder at any depth. There is no depth limit.
 
-### Pipeline Steps
+Before passing files to the AI engine, NSFW Manager first builds a list of files to process:
 
-1. **Directory scan**  
-   - Collects files based on enabled formats  
-   - Applies exclusions (e.g., files starting with `.`)
+- Only files with extensions matching the enabled formats are included
+- Junk files (Thumbs.db, .DS_Store, AppleDouble files) are skipped if junk exclusion is enabled
+- Files above the configured size limit are skipped
+- Files in excluded subdirectories (if configured) are skipped
 
-2. **Cache lookup**  
-   - Checks `file_cache` and `engine_results` tables  
-   - Validates metadata, threshold, engine, and MD5 (optional)
-
-3. **Engine inference**  
-   - Runs the selected engine (int8, fp16, full, ifnude)  
-   - Produces score + label  
-   - Stores results in SQLite
-
-4. **UI update**  
-   - Adds result to the main list  
-   - Updates statistics (detected, errors, total, scan time)
-
-5. **Preview generation**  
-   - Asynchronous image/video frame loading  
-   - Prevents UI blocking
-
-This pipeline is optimized for repeated scans and large directories.
+This filtering step ensures the AI engine only sees files it can actually process.
 
 ---
 
-# ⚙️ Engine System
+## Step 2: Cache Check
 
-NSFW Manager supports multiple engines with different performance and accuracy profiles.
+If the scan cache is enabled, NSFW Manager checks whether a valid cached result exists for each file before sending it to the AI engine. A cached result is valid only if the file has not changed (same size, same modification time, same engine, same threshold — and same MD5 if that option is enabled).
 
-### Built‑in Engines (Commercial)
-- **int8** — fastest, binary behavior  
-- **fp16** — balanced, GPU‑only  
-- **full** — maximum accuracy  
+Files with valid cached results are added to the results display instantly, without any AI analysis. This is why re-scanning a familiar folder with the cache enabled is so much faster than the first scan.
 
-### Optional Engines (GPLv3)
-- **ifnude** — granular nudity classification  
-- Supports detailed anatomical labels  
-- Best for custom thresholds (e.g., 0.63)
+Files without a valid cache entry proceed to the analysis step.
 
-### Engine Architecture
-
-- Engines are loaded dynamically  
-- CPU/GPU selection controlled by Diagnostics tab  
-- Each engine stores results separately in SQLite  
-- Switching engines forces re‑scan  
-- Threshold stored per engine/model
+See [Scan Cache](../features/scan-cache.md) for details.
 
 ---
 
-# 🗄 SQLite Cache Layer
+## Step 3: AI Analysis
 
-The cache layer dramatically accelerates repeated scans.
+Each file that does not have a cached result is passed to the selected detection engine.
 
-### Tables
+The engine returns:
+- A **score** between 0.0 and 1.0
+- A **label** describing what was detected (for example: explicit, suggestive, safe)
 
-#### `file_cache`
-Stores file metadata:
-- path  
-- mtime  
-- size  
-- md5 (optional)
+For video files, frames are extracted first and each frame is analyzed as an image. The highest frame score becomes the score for the video.
 
-#### `engine_results`
-Stores engine‑specific results:
-- engine_id  
-- engine_model  
-- score  
-- label  
-- threshold  
-- cached_at  
-
-### Behavior
-
-- First scan: normal speed  
-- Subsequent scans: extremely fast  
-- MD5 optional for strict validation  
-- Cascade delete ensures consistency  
-
-See **[SQLite Schema](ca://s?q=Show_SQLite_schema)** for full details.
+The analysis runs in the **background**: the user interface stays fully responsive during scanning. You can browse results that have already appeared while the scan continues processing other files.
 
 ---
 
-# 🖼 Image Preview System (Async)
+## Step 4: Threshold Comparison and Results Display
 
-Large images can freeze UI if decoded synchronously.  
-NSFW Manager uses an asynchronous preview loader:
+After each file is analyzed, NSFW Manager compares the score against the configured detection threshold:
 
-- UI updates instantly  
-- Decoding happens in background  
-- Switching files cancels previous tasks  
-- Video frames extracted asynchronously  
-- “Hide Image” toggles preview instantly
+- Score at or above threshold: the file is added to the **Detected** section of the results list
+- Score below threshold: the file is considered safe and not shown in results
 
-This system ensures smooth interaction even with 50–80 MB images.
+If a file could not be decoded at all (corrupted file, unsupported codec), it is added to the **Corrupted files** section instead.
+
+Results appear in real time — you do not need to wait for the entire scan to complete before reviewing and acting on already-detected files.
 
 ---
 
-# 🎥 Video Decoding Architecture
+## Step 5: Preview and Actions
 
-Video detection uses two decoding backends:
+Once results are displayed, you can click any file to see a preview and its detection details in the [Properties Panel](../ui/properties-panel.md). You can also act on results immediately — quarantine, move, or delete — while the scan continues in the background.
 
-### **OpenCV (default)**
-- Fastest  
-- Automatically falls back to FFmpeg  
-- Ideal for most users
-
-### **FFmpeg (forced mode)**
-- More stable  
-- Slower  
-- Recommended for problematic video libraries
-
-### Video Parameters
-- Maximum video size (MB)  
-- Frames to sample (1–100)  
-- Format filters (mp4, mov, mkv, avi, webm)
-
-Video detection extracts frames and runs them through the engine pipeline.
+After the scan completes, the progress bar is replaced by the total scan duration and a Refresh button. Pressing Refresh re-scans the same folder, applying the same settings.
 
 ---
 
-# 🧩 UI Architecture
+## Design Principles
 
-The UI is divided into several functional modules:
+**Local only:** Every step described above happens on your machine. No file content, no detection results, no metadata leaves your computer. The only network activity is licence validation at startup.
 
-### **Main Screen**
-- Directory selection  
-- Scan button  
-- Results list  
-- Preview panel  
-- Statistics  
-- Action buttons (delete, move, quarantine)
+**CPU-first by default:** GPU acceleration is optional for both image and video processing. The default is CPU-only, which works on every Windows machine and avoids driver compatibility issues. GPU can be enabled in Configuration → Engines for faster processing when supported hardware is available.
 
-### **Settings Panel**
-Tabs include:
-- Engines  
-- Photo detection  
-- Video detection  
-- Cache  
-- Diagnostics  
-- Directories  
-- General  
-- Theme  
+**Scan does not block review:** Scanning and reviewing results happen independently. A large scan over thousands of files does not prevent you from acting on files that have already been detected.
 
-Each tab controls a specific subsystem.
-
-### **Quarantine Manager**
-- Session‑based quarantine  
-- Restore or permanently delete  
-- Preview quarantined files
-
-### **License Panel**
-- Email + key validation  
-- License retrieval  
-- Purchase link  
-- Demo mode status
+**Scan does not modify files:** The scan process only reads files. No modification, no copy, no upload. Files are only moved or deleted when you explicitly choose an action.
 
 ---
 
-# 🔐 Licensing Architecture
+## Related Pages
 
-Licensing uses a secure client‑server model:
-
-- HMAC‑derived keys  
-- Email‑bound licenses  
-- Optional machine binding  
-- HTTPS validation  
-- No offline activation  
-- Demo mode with 5 actions per session
-
-The client stores only:
-- email  
-- key  
-- validation status  
-
-No sensitive data is stored locally.
-
----
-
-# 📦 MSI Deployment Model
-
-NSFW Manager uses a **per‑user MSI**:
-
-- No admin rights required  
-- No UAC prompt  
-- Silent install supported  
-- No Program Files access  
-- No HKLM registry writes  
-- No privileged CustomActions  
-- Start Menu shortcuts stored in `%APPDATA%`
-
-This eliminates Windows Installer errors 1925, 1303, and 1603.
-
----
-
-# 📁 Logging Architecture
-
-Logs are stored in:
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-
-Logs cover:
-- engine initialization  
-- cache operations  
-- video decoding  
-- licensing  
-- errors and warnings  
-
----
-
-# 📌 Summary
-
-NSFW Manager’s architecture is built around:
-
-- modular engine system  
-- fast SQLite caching  
-- asynchronous preview loading  
-- robust video decoding  
-- secure licensing  
-- per‑user MSI deployment  
-- privacy‑focused local processing  
-
-This design ensures high performance, stability, and flexibility across all supported engines and workflows.
-
----
-
+- [Detection Engines](./engine.md) — details on each AI model
+- [Scan Cache](../features/scan-cache.md) — how results are stored and reused
+- [Detection Threshold](../features/detection-threshold.md) — how the threshold affects what gets flagged
+- [Video Support](../features/video-support.md) — how video frame sampling works

@@ -1,135 +1,55 @@
-# SSL & Secure Licence Validation  
-## Protecting Communication Between NSFW Manager and the Licence Server
+# SSL and Secure Licence Validation
+## How NSFW Manager Protects Its One Network Request
 
-NSFW Manager performs only one network operation:  
-**secure licence validation.**
-
-This document explains how SSL, encryption, and verification ensure that licence checks are safe, private, and tamper-resistant.
+NSFW Manager makes a single outbound network request: licence validation at startup. This page explains how that request is secured.
 
 ---
 
-## 🔐 Why SSL Matters
+## Why Security Matters for Licence Validation
 
-Licence validation must be:
-- Confidential  
-- Authentic  
-- Tamper-proof  
-- Resistant to interception  
+The validation request contains your email address, licence key, and a machine identifier. If transmitted over an unencrypted connection, anyone who can monitor your network traffic could intercept your licence key and potentially use it on another machine.
 
-To achieve this, NSFW Manager uses:
-- HTTPS (TLS 1.2+)  
-- Certificate pinning  
-- HMAC-SHA256 signatures  
-- Anti-rollback protection  
+NSFW Manager uses multiple layers of protection to prevent this.
 
 ---
 
-# 🔒 SSL/TLS Security
+## HTTPS / TLS 1.2+
 
-### **1. Encrypted Channel**
-All licence requests use:
-https://api.nsfwmanager.com/
+All communication with https://api.nsfwmanager.com/ uses HTTPS with TLS 1.2 or higher. This encrypts the entire request and response, preventing anyone monitoring network traffic from reading the contents.
 
-via TLS 1.2 or higher.
+NSFW Manager validates the server's TLS certificate before sending any data:
+- Certificate chain is verified against trusted root CAs
+- Hostname must match the certificate
+- Certificate must not be expired
 
-This ensures:
-- No man-in-the-middle  
-- No plaintext transmission  
-- No sniffing of licence keys  
-
-### **2. Certificate Validation**
-NSFW Manager validates:
-- Certificate chain  
-- Issuer  
-- Expiration  
-- Hostname match  
-
-If validation fails:
-- The licence request is aborted  
-- The user receives a clear error  
-- No data is transmitted  
+If certificate validation fails for any reason, the request is aborted and no data is sent. NSFW Manager falls back to using cached licence data.
 
 ---
 
-# 🧩 Payload Security
+## HMAC-SHA256 Payload Signing
 
-The payload includes:
-- Licence key  
-- Machine identifier (hashed)  
-- Version number  
-
-It does **not** include:
-- File names  
-- File content  
-- Detection results  
-- Folder structure  
-- User identity  
-
-Related documentation:  
-**[Privacy](ca://s?q=Open_privacy_document)**
-
----
-
-# 🔐 HMAC-SHA256 Verification
-
-To prevent tampering:
-- The server signs responses with HMAC-SHA256  
-- NSFW Manager verifies the signature locally  
-- Invalid signatures are rejected  
+In addition to TLS encryption, the server signs its responses using HMAC-SHA256. NSFW Manager verifies this signature locally before accepting the response.
 
 This protects against:
-- Fake licence servers  
-- Modified responses  
-- Replay attacks  
+- **Fake licence servers:** An attacker who intercepts DNS or routes traffic to a different server cannot produce a valid HMAC signature for the response
+- **Tampered responses:** A modified response (for example, changing "expired" to "valid") would have an invalid signature and be rejected
+- **Replay attacks:** Old valid responses cannot be replayed to trick the application into accepting a revoked licence
 
 ---
 
-# 🛡 Anti-Rollback Protection
+## What the Request Contains
 
-NSFW Manager prevents:
-- Downgrading licence files  
-- Reusing expired trial tokens  
-- Replaying old validation responses  
+The validation request includes:
+- Email address
+- Licence key
+- A SHA-256 hashed machine identifier (the raw hardware data is hashed before sending)
+- Application major version number
 
-This ensures licence integrity over time.
-
----
-
-# 🧪 Error Handling
-
-If SSL validation fails:
-- The licence is not activated  
-- No data is sent  
-- A clear message is shown  
-- The user can retry safely  
-
-Common causes:
-- Expired certificate  
-- Network filtering  
-- Antivirus HTTPS inspection  
-- Incorrect system clock  
+It does not include any file names, folder paths, detection results, or personal data beyond the licence information.
 
 ---
 
-# 📦 Version History
+## Related Pages
 
-### **v2.0.3**
-- HMAC verification added  
-- Anti-rollback protection  
-- Hardened SSL validation  
-
-### **v2.0.2**
-- Documentation added  
-
-### **v2.0.0**
-- Initial SSL licence validation  
-
----
-
-# 📌 Summary
-
-NSFW Manager uses strong SSL/TLS encryption, certificate validation, HMAC signatures, and anti-rollback protection to ensure licence validation is secure, private, and tamper-resistant.
-
-Only licence data is transmitted — never your files.
-
----
+- [Privacy](./privacy.md) — complete overview of what NSFW Manager does and does not transmit
+- [Licence Security](./licence-security.md) — anti-tamper protections for the local licence cache

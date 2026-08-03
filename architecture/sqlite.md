@@ -1,276 +1,66 @@
-# SQLite Scan Cache Database  
-## How NSFW Manager Stores and Reuses Scan Results
+# The Scan Cache Explained
+## What Gets Stored and Why It Helps
 
-NSFW Manager uses a local SQLite database to store scan results and dramatically accelerate repeated scans. This document explains how the database is structured, how entries are validated, and how the cache interacts with the detection engines.
-
----
-
-## 📌 Overview
-
-The scan cache is implemented using a lightweight SQLite database stored under:
-%LOCALAPPDATA%\NsfwManager\scan_cache.db
-
-
-The database contains one table that stores metadata for each scanned file, including:
-
-- file path  
-- file size  
-- last modified timestamp  
-- detection score  
-- detection reason  
-- engine used  
-- optional MD5 hash (if enabled)
-
-This allows NSFW Manager to skip re‑scanning files that have not changed.
+This page explains the scan cache from a behavioral perspective — what NSFW Manager remembers about your files, how long it keeps that information, and what triggers a re-analysis. For configuration options, see [Scan Cache](../features/scan-cache.md).
 
 ---
 
-## 📌 Detailed Overview
+## What the Cache Stores
 
-The scan cache database contains:
+When the scan cache is enabled and NSFW Manager analyzes a file, it stores a record of:
 
-1. **`file_cache`**  
-   Stores metadata for each scanned file.
+- The file's location (path), size, and last modification time
+- Which engine and model variant was used
+- What threshold was active
+- The detection score and label returned by the engine
+- Optionally, an MD5 fingerprint of the file content (if MD5 verification is enabled)
 
-2. **`engine_results`**  
-   Stores detection results per engine, per model, per threshold.
-
-This separation ensures:
-
-- file metadata is stored once  
-- each engine/model combination stores its own results  
-- switching engines or thresholds forces re‑scan  
-- MD5 verification remains optional  
-- cache stays consistent across updates  
+This record is kept on your local machine in a database file in your user profile. It is never transmitted anywhere.
 
 ---
 
-# 🗄 Table: `file_cache`
+## How the Cache Makes Subsequent Scans Faster
 
-This table stores one entry per file.
+On the second and later scans of the same folder, NSFW Manager compares each file against its stored record. If the file's size, modification time, engine, model, and threshold all match the stored record, the analysis is skipped and the stored result is used directly.
 
-```sql
-CREATE TABLE file_cache (
-    id     INTEGER PRIMARY KEY AUTOINCREMENT,
-    path   TEXT UNIQUE NOT NULL,
-    mtime  REAL NOT NULL,
-    fsize  INTEGER NOT NULL,
-    md5    TEXT
-);
+For a folder of 10,000 photos where 200 were added since the last scan:
+- 9,800 files: result retrieved from cache instantly
+- 200 new files: analyzed by the AI engine
 
+The total scan time is dominated by those 200 new files rather than the full 10,000.
 
 ---
 
-# 🗄 Database Structure
+## When a Cached Result Becomes Invalid
 
-The SQLite database contains a single main table:
+A cached result is discarded and the file is re-analyzed whenever any of these change:
 
-### **Table: scan_cache**
+- **File content changed** — a different modification time or file size (or a different MD5 if that option is enabled)
+- **Engine changed** — you switched from one engine to another
+- **Threshold changed** — a different threshold means the detection decision may have changed
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INTEGER PRIMARY KEY | Unique entry ID |
-| `file_path` | TEXT | Absolute path of the file |
-| `file_size` | INTEGER | Size in bytes |
-| `last_modified` | INTEGER | Last modified timestamp |
-| `engine` | TEXT | Engine used (int8, fp16, full, ifnude) |
-| `score` | REAL | Detection score |
-| `reason` | TEXT | Detection label |
-| `md5` | TEXT (optional) | MD5 hash if enabled |
-| `created_at` | INTEGER | Timestamp of first scan |
-| `updated_at` | INTEGER | Timestamp of last update |
-
-This schema is intentionally simple to maximize speed and reliability.
-
-
-Column Details
-|-|-|
-|Column	|Description|
-|id|	Unique file identifier|
-|path|	Absolute file path (unique)|
-|mtime|	Last modified timestamp (float)|
-|fsize|	File size in bytes|
-|md5|	Optional MD5 hash (only stored when MD5 verification is enabled)|
-
-This table allows NSFW Manager to quickly determine whether a file has changed since the last scan.
-
-🗄 Table: engine_results
-This table stores one entry per engine, per model, per file.
-
-CREATE TABLE engine_results (
-    file_id       INTEGER NOT NULL
-                  REFERENCES file_cache(id) ON DELETE CASCADE,
-    engine_id     TEXT NOT NULL,
-    engine_model  TEXT NOT NULL,
-    score         REAL,
-    label         TEXT,
-    threshold     REAL NOT NULL,
-    cached_at     TEXT NOT NULL,
-    PRIMARY KEY (file_id, engine_id, engine_model)
-);
-
-Column Details
-|-|-|
-|Column|	Description|
-|file_id|	Foreign key referencing file_cache.id|
-|engine_id|	Engine name (int8, fp16, full, ifnude)|
-|engine_model|	Model variant (e.g., “default”, “fast”, “full”)|
-|score|	Detection score returned by the engine|
-|label|	Detection label (Pornography, Suggestive, Hentai, Safe, etc.)|
-|threshold|	Threshold used during detection|
-|cached_at|	Timestamp when the result was stored|
-
-Why this design is powerful
-- Multiple engines can store results for the same file  
-Example: int8 + full + ifnude results coexist.
-
-Multiple model variants are supported  
-- Example: ifnude “fast” and ifnude “default” store separate entries.
-
-Threshold is stored  
-- Cached results remain valid even if the user changes their threshold later.
-
-- Cascade delete  
-Removing a file entry automatically removes all engine results.
+The threshold invalidation in particular is worth understanding: if a file scored 0.55 under a threshold of 0.60 (below threshold, not flagged), and you then lower the threshold to 0.50, that file should now be flagged. Automatically re-analyzing it on the next scan ensures your results reflect your current settings.
 
 ---
 
-⚡ How NSFW Manager Uses the Cache
-On scan start:
-1. Read file metadata (mtime, size)
-2. Query file_cache for matching entry
-3. If MD5 verification is enabled → compute MD5
-4. Query engine_results for:
-- - matching engine
-- - matching model
-- - matching threshold
-5. If all fields match → reuse cached score
-6. If any field differs → re-scan and update both tables
+## Clearing the Cache
 
-On re‑scan:
-- If metadata matches → cached result reused
-- If metadata differs → file reprocessed and cache updated
+You can clear the entire cache at any time from **Configuration → Cache → Clear Cache**. This removes all stored records and forces a full re-analysis on the next scan.
 
-This ensures correctness while maximizing speed.
+This is useful when:
+- You have changed engines and want a clean slate
+- You suspect the cache contains stale data from a previous configuration
+- You want to verify that a fresh scan agrees with your cached results
 
 ---
 
-🔍 Cache Validation Logic
-A cached entry is valid only if:
-- path matches
-- mtime matches
-- fsize matches
-- engine_id matches
-- engine_model matches
-- threshold matches
-- md5 matches (only if MD5 verification is enabled)
+## Cache Size and Storage
 
-If any of these differ, the file is re‑scanned.
-This prevents false positives when:
-- files are edited
-- metadata changes
-- engines are switched
-- thresholds are adjusted
-- users modify or replace files
+The cache database is stored locally in your user profile. The Configuration → Cache panel shows the current size and the number of records stored. Cache size grows with the number of files you have scanned. For most personal collections, it remains small (a few MB). For very large collections (hundreds of thousands of files), it may grow to tens of MB.
 
 ---
 
-🧩 MD5 Verification
-MD5 verification is optional and disabled by default.
+## Related Pages
 
-When enabled:
-- NSFW Manager computes an MD5 hash for each file
-- The hash is stored in file_cache.md5
-- Future scans compare the hash to detect changes
-- Re-scans are slightly slower due to hashing overhead
-
-When disabled:
-- Validation relies on size + timestamp
-- Faster, but less strict
-
-MD5 is recommended for directories where files may be edited or replaced.
-
----
-
-🧹 Clearing the Cache
-Users can clear the cache from the Cache tab in Settings.
-
-Clearing the cache:
-- deletes all database entries
-- forces a full re-scan next time
-- does not affect quarantine or user settings
-- is safe and reversible
-
-Useful when:
-- the database grows large
-- entries become outdated
-- engines or thresholds change
-- MD5 verification is toggled
-
----
-
-🧪 Interaction With Detection Engines
-Each engine stores its own results in the cache:
-- int8 → fastest, binary scores
-- fp16 → balanced, GPU-only
-- full → maximum accuracy
-- ifnude → granular anatomical labels
-
-Cache entries include:
-- engine name
-- model variant
-- threshold
-
-This ensures cached results always match the active engine configuration.
-
----
-
-📁 Log Locations
-Cache operations appear in:
-
-- %APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-- %LOCALAPPDATA%\NsfwManager\logs\startup.log
-- %LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-These logs help diagnose:
-- database initialization
-- read/write errors
-- MD5 mismatches
-- engine switching behavior
-
----
-📌 Summary
-The SQLite schema used by NSFW Manager provides:
-
-- fast and reliable caching
-- engine‑specific results
-- threshold‑aware validation
-- optional MD5 integrity checking
-- automatic cleanup via cascade deletes
-- safe per-user storage
-
-This design ensures that repeated scans are extremely fast while maintaining correctness and flexibility across all engines, including the granular ifnude model.
-
----
-
-
-# ⚡ How the Cache Speeds Up Scanning
-
-During a scan, NSFW Manager performs the following steps:
-
-1. Read file metadata (size, timestamp)
-2. Query the SQLite database for a matching entry
-3. If MD5 verification is enabled, compute MD5 and compare
-4. If all fields match:
-   - **Reuse cached score and reason**
-   - Skip engine inference
-5. If any field differs:
-   - Re-scan the file normally
-   - Update the database entry
-
-This approach ensures correctness while avoiding unnecessary work.
-
----
-
-
-
+- [Scan Cache](../features/scan-cache.md) — configuration, MD5 option, and use-case guidance
+- [Detection Threshold](../features/detection-threshold.md) — why threshold changes invalidate cache entries

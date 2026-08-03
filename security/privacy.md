@@ -1,149 +1,73 @@
-# Privacy & Local Processing  
-## How NSFW Manager Protects Your Data
+# Privacy and Local Processing
+## Your Files Never Leave Your Computer
 
-NSFW Manager is designed with a strict privacy-first philosophy:  
-**your files never leave your computer.**
-
-This document explains how NSFW Manager handles data, what is processed locally, and how privacy is enforced across all features.
+NSFW Manager is designed with a strict privacy-first approach. Every step of the detection process happens entirely on your machine. No image, no video frame, no filename, and no detection result is ever transmitted to an external server.
 
 ---
 
-## 🔒 Core Principles
+## What Is Processed Locally
 
-### **1. 100% Local Processing**
-All detection happens locally:
-- Images  
-- Videos  
-- Thumbnails  
-- Metadata  
-- Engine inference  
-- Cache storage  
+**Images and videos:** Loaded, decoded, and analyzed by the AI engine running on your machine. The engine model is a file stored in your user profile — no cloud inference, no remote AI service.
 
-No file content is ever uploaded, transmitted, or shared.
+**Video frames:** Extracted locally. The frames are never stored permanently unless you are viewing a preview in the Properties Panel (where they are held in memory temporarily).
 
-### **2. No Telemetry**
-NSFW Manager does **not** collect:
-- Usage analytics  
-- Crash reports  
-- File names  
-- File paths  
-- Detection results  
-- Hardware information  
+**Scan results:** Stored in a local database in your user profile. Never transmitted.
 
-### **3. No Cloud Dependencies**
-The application does not rely on:
-- Remote AI models  
-- Cloud inference  
-- Online scanning  
-- External storage  
+**Preview thumbnails:** Generated locally and stored in the local cache if caching is enabled.
 
-Everything runs offline.
+**Quarantine metadata:** Stored in the quarantine session folders on your machine.
 
 ---
 
-# 🧩 What NSFW Manager Processes
+## What Is Not Collected
 
-### **Images & Videos**
-Processed locally using ONNX engines.  
-Frames and thumbnails are extracted locally.
+NSFW Manager collects **no usage data** of any kind:
 
-### **Metadata**
-Only basic metadata is read:
-- Dimensions  
-- Duration  
-- File size  
-- Timestamps  
-
-Metadata is never transmitted.
-
-### **Cache**
-The SQLite cache stores:
-- File hash (MD5 optional)  
-- Engine results  
-- Thumbnail  
-- Timestamp  
-
-Cache is stored in:
-%APPDATA%/NsfwManager/scan_cache.db
-
-
-Related documentation:  
-**[Cache System](ca://s?q=Show_SQLite_schema)**
+- No analytics or crash reports
+- No file names, file paths, or folder structures
+- No detection results or scores
+- No information about what you scan or how often you use the application
+- No hardware telemetry beyond the hashed machine ID used for licence binding
 
 ---
 
-# 🔐 Licence Validation (Privacy-Safe)
+## The Only Outbound Network Request
 
-Licence validation is the **only** network request NSFW Manager performs.
+The single network request NSFW Manager makes is **licence validation at startup**.
 
-It sends:
-- Licence key  
-- Machine identifier (hashed)  
-- Version number  
+This request sends:
+- Your email address and licence key
+- A hashed machine identifier (a one-way hash — the raw hardware data is not transmitted)
+- The application's major version number
 
-It does **not** send:
-- File names  
-- File content  
-- Detection results  
-- Folder structure  
-- User identity  
+This request is:
+- Sent over HTTPS (TLS 1.2 or higher)
+- Signed with HMAC-SHA256 to prevent tampering
+- The only time any data leaves your machine
 
-Related documentation:  
-**[Licence System](ca://s?q=Open_licence_system)**  
-**[SSL Security](ca://s?q=Open_SSL_security)**
+**What is never sent in this request:** file names, file content, folder paths, detection scores, scan history, or any information about what you have scanned.
 
 ---
 
-# 🛡 Quarantine Privacy
+## Model Downloads
 
-Quarantined files remain local:
-- Stored in `%APPDATA%/NsfwManager/Quarantine/`  
-- Never uploaded  
-- Never transmitted  
-- Never shared  
+When you choose to download an optional engine model (The Laid-Back One fp16 or The Nit Picker onnx) from Configuration → Engines, NSFW Manager downloads a model file from a CDN over HTTPS. This download:
 
-Related documentation:  
-**[Quarantine](ca://s?q=Open_quarantine_feature)**
+- Sends no personal data beyond a standard HTTPS request
+- Downloads only the model file you requested
+- Is triggered explicitly by you — it does not happen automatically
 
 ---
 
-# 🧪 Diagnostics Privacy
+## Why Local Processing Matters
 
-Diagnostics show:
-- Engine status  
-- GPU availability  
-- Cache integrity  
+Scanning for sensitive content is inherently personal. A cloud-based scanning service would require uploading your images to a third-party server, where they might be logged, reviewed by staff, used for model training, or subject to data breach risk.
 
-Diagnostics do **not** send any data externally.
-
-Related documentation:  
-**[Diagnostics](ca://s?q=Open_diagnostics_panel)**
+NSFW Manager avoids all of these risks by keeping everything local. The AI model is on your machine. The results stay on your machine. The only thing that leaves is a licence key verification handshake.
 
 ---
 
-# 📦 Version History
+## Related Pages
 
-### **v2.0.3**
-- Licence hardening  
-- MD5 strict mode  
-- Improved cache privacy  
-
-### **v2.0.2**
-- Public documentation added  
-
-### **v2.0.0**
-- Privacy-first architecture introduced  
-
-### **v1.0.0**
-- Initial local-only processing  
-
----
-
-# 📌 Summary
-
-NSFW Manager is built around one promise:  
-**your sensitive files stay on your machine, always.**
-
-No telemetry, no cloud scanning, no external storage — just fast, private, local detection.
-
----
+- [Licence Security](./licence-security.md) — details on the licence validation request
+- [SSL and Secure Communication](./ssl.md) — how the validation request is protected

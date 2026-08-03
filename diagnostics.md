@@ -1,70 +1,62 @@
-# Diagnostics  
-## Engine, Cache & System Health Overview
+# Diagnostics
+## Understanding Engine Status, GPU, and Cache Information
 
-The **Diagnostics Panel** provides detailed information about engine status, cache integrity, GPU availability, and system configuration.
+The **Diagnostic** tab in the Configuration Panel provides a read-only view of your NSFW Manager environment — specifically the AI runtime, GPU availability, and your current engine/CPU settings. This information is useful for troubleshooting performance issues and for providing accurate details when requesting support.
 
-Introduced in v2.0.0 and expanded in **[v2.0.3](ca://s?q=Open_v2.0.3_release_notes)**.
-
----
-
-## 🧩 Sections
-
-### **1. Engine Diagnostics**
-- ONNX runtime status  
-- GPU availability  
-- CPU fallback  
-- Engine load time  
-- Model version  
-- Threshold validation  
-
-### **2. Cache Diagnostics**
-- SQLite connection status  
-- Table integrity  
-- Cached entries count  
-- MD5 validation  
-- Cache cleanup tools  
-
-### **3. System Diagnostics**
-- OS version  
-- GPU model  
-- CPU model  
-- RAM usage  
-- Disk space  
-
-### **4. Logs**
-- Application logs  
-- Engine logs  
-- Error logs  
-- Export option  
+Access it from the Configuration Panel → Diagnostic tab.
 
 ---
 
-# 🧪 Cache Tools
+## Engine and Runtime Information
 
-Diagnostics includes:
-- Cache rebuild  
-- Cache cleanup  
-- Cache validation  
-- MD5 strict mode toggle  
+**ONNX Runtime version:** The version of the AI inference library installed with NSFW Manager. Different versions can affect compatibility with certain GPU drivers or affect which execution providers are available.
 
----
+**Available providers:** Lists which ONNX execution backends are available on your system. Common values:
+- CPUExecutionProvider — always present; CPU inference is always available
+- DmlExecutionProvider — DirectML, available on Windows with a compatible DirectX 12 GPU (covers most NVIDIA, AMD, and Intel GPUs from the last several years)
+- CUDAExecutionProvider — NVIDIA CUDA; available only if you have installed CUDA drivers separately
 
-# 📦 Version History
+**GPU available:** Whether a compatible GPU was detected. If this shows No, GPU acceleration cannot be used for image inference.
 
-### **v2.0.3**
-- Cache validation improved  
-- MD5 strict mode added  
+**GPU in use:** Whether GPU acceleration is currently active for image inference. This will be No if "Force CPU for photos" is checked in the Engines tab, even if a GPU is available.
 
-### **v2.0.2**
-- Documentation added  
-
-### **v2.0.0**
-- Diagnostics panel introduced  
+**GPU type:** The name of the detected graphics adapter.
 
 ---
 
-# 📌 Summary
+## Force CPU Toggles
 
-The Diagnostics Panel helps users and developers understand engine behavior, cache status, and system performance, making troubleshooting easier and more transparent.
+The Diagnostic tab includes duplicates of the Force CPU checkboxes from the Engines tab:
+
+**Force CPU instead of GPU for photos:** When checked, image inference always uses the CPU. When unchecked and a GPU is available, the GPU is used.
+
+**Force CPU instead of GPU for videos:** When checked, video decoding always uses the CPU. When unchecked and a GPU is available, DirectX 11 hardware decoding (d3d11va) is used for video frames.
+
+These are duplicated here so you can quickly toggle them while viewing the diagnostic information, without switching tabs.
 
 ---
+
+## When to Check the Diagnostic Tab
+
+**You enabled GPU but scans are not faster:** Check "GPU in use" — if it shows No, the GPU is not being used despite being available. Verify that "Force CPU" is unchecked.
+
+**You are filing a bug report:** Include the ONNX Runtime version, available providers, GPU available/in use, and GPU type in your report. This saves several back-and-forth messages.
+
+**You want to verify your configuration:** After changing CPU/GPU settings, the Diagnostic tab confirms which settings are actually in effect.
+
+---
+
+## Cache Information
+
+The Configuration Panel → Cache tab (not the Diagnostic tab) contains cache-related information: number of cached files, total results stored, and total cache size. See [Scan Cache](features/scan-cache.md) for details.
+
+---
+
+## Logs
+
+Application logs are written to:
+`
+%APPDATA%\NsfwManager\logs\NsfwManager.log
+`
+
+If you experience unexpected behavior, the log file is the first place to check for error messages. You can open the log folder directly from the Help menu.

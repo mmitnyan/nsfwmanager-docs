@@ -1,87 +1,76 @@
-# Installation Guide  
+# Installation Guide
 ## How to Install NSFW Manager on Windows
 
-NSFW Manager is distributed as a **Windows MSI installer**.  
-The installation process is simple, fast, and requires no technical knowledge.
+NSFW Manager is distributed as a **Windows MSI installer**. The installation process is silent, requires no administrator rights, and completes in under a minute.
 
 ---
 
-## 🖥 System Requirements
+## System Requirements
 
-- Windows 10 or Windows 11  
-- 64-bit system  
-- Optional: GPU for faster video decoding  
-- ~500 MB free disk space  
+- Windows 10 or Windows 11 (64-bit)
+- Approximately 500 MB of free disk space
+- Optional: a dedicated GPU for faster scanning (see [Performance Troubleshooting](../troubleshooting/performance.md))
 
 ---
 
-## 📦 Download
+## Download
 
 Download the installer from:
 
 **https://download.nsfwmanager.com/**
 
-You will receive:
-- `nsfwmanager-<version>-x64.msi` (silent per-user installer)
+You will receive a file named 
+sfwmanager-<version>-x64.msi.
 
 ---
 
-## 🚀 Installation Steps
+## Installation Steps
 
-### **1. Double-click the MSI**
+### 1. Double-click the MSI file
+
 The installer runs silently:
-- No UAC prompt  
-- No admin rights required  
-- No configuration needed  
+- No UAC prompt
+- No administrator password required
+- No configuration needed during installation
 
-Introduced in **[v2.0.3](ca://s?q=Open_v2.0.3_release_notes)**.
+### 2. Installation location
 
-### **2. Installation Location**
-Installed in:
-%LOCALAPPDATA%/Programs/NsfwManager/
+NSFW Manager installs into:
 
+`
+%LOCALAPPDATA%\NsfwManager\
+`
 
-### **3. Configuration & Logs**
-Stored in:
-%APPDATA%/NsfwManager/
+This is a folder inside your Windows user profile (C:\Users\<yourname>\AppData\Local\NsfwManager\). No files are written to C:\Program Files\ or anywhere that requires admin access.
 
+### 3. Configuration and data
 
-Includes:
-- config.json  
-- scan_cache.db 
-- quarantine folder  
-- logs  
+Your settings, licence, logs, and quarantine data are stored in:
 
----
+`
+%APPDATA%\NsfwManager\
+`
 
-## 🔧 Troubleshooting
+This is separate from the application files so that updating NSFW Manager never disturbs your configuration.
 
-### **Installer Errors 1925 / 1303**
-Fixed in v2.0.3.  
-If they appear, simply re-run the installer.
+### 4. Launch
 
-### **Antivirus Blocking**
-NSFW Manager uses:
-- Signed MSI  
-- Verified SSL  
-- No telemetry  
-- No cloud scanning  
-
-It is safe to whitelist.
-
-Related documentation:  
-**[Privacy](ca://s?q=Open_privacy_document)**  
-**[SSL Security](ca://s?q=Open_SSL_security)**
+After installation, find NSFW Manager in your Start Menu under NsfwManager. On first launch, the Configuration Panel opens automatically to let you set your scan directory, quarantine directory, and move directory.
 
 ---
 
-## 📌 Summary
+## Antivirus and Security
 
-Installation is simple:
-1. Download MSI  
-2. Double-click  
-3. Launch NSFW Manager  
+NSFW Manager is distributed as a code-signed MSI. If your antivirus flags it, this is a false positive from the AI detection model files bundled with the installer (AI model weights sometimes trigger heuristic malware scanners). You can safely whitelist the installer and the application.
 
-No admin rights, no configuration, no complexity.
+NSFW Manager does not connect to the internet except for licence validation at startup. No files are uploaded. No telemetry is collected.
 
 ---
+
+## Troubleshooting
+
+### Installer errors 1925 or 1303
+These errors occur only with older per-machine installers and should not appear with current versions. If they do, see [Windows Installer Errors 1925 and 1303](../troubleshooting/windows-errors-1925-1303.md).
+
+### Silent installation
+For automated deployment, see [Installation Model: No Admin Required](../architecture/msi-per-user.md#silent-installation).

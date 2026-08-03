@@ -1,167 +1,81 @@
-# Scan Cache  
-## How NSFW Manager Accelerates Repeated Scans
+# Scan Cache
+## Accelerating Repeated Scans with Persistent Results
 
-The scan cache system allows NSFW Manager to dramatically speed up repeated scans of the same directory. Instead of reprocessing every file, the application stores previous scan results in a local SQLite database and reuses them when appropriate. This feature is optional and disabled by default.
+The **scan cache** allows NSFW Manager to remember the result of every file it has analyzed. On subsequent scans of the same folder, already-analyzed files are skipped entirely — results are reused instantly from cache, and only new or changed files require actual AI analysis.
 
----
-
-## 📌 Overview
-
-The scan cache is designed for users who frequently scan the same folders — for example, synced phone photo directories or recurring media collections. When enabled, NSFW Manager stores:
-
-- file path  
-- file size  
-- last modified timestamp  
-- detection score  
-- detection reason  
-- engine used  
-
-On subsequent scans, cached results are reused unless the file has changed.
+The cache is disabled by default. Enable it in **Configuration → Cache**.
 
 ---
 
-# ⚡ Performance Benefits
+## Why Enable the Scan Cache
 
-### First Scan
-The first scan with cache enabled is similar in speed to a normal scan.  
-The only additional overhead is writing results to the SQLite database.
+Without the cache, every scan is a full analysis from scratch. This is fine for a one-time scan of a new folder. It becomes a significant time cost when you scan the same folder regularly.
 
-### Subsequent Scans
-Re-scanning the same directory becomes **extremely fast**:
+**Enable the cache when:**
+- You scan the same folder repeatedly (daily or weekly)
+- You have a phone sync folder that accumulates new photos while most existing ones stay the same
+- You have a large NAS or cloud-sync directory where only a fraction of files change between scans
+- You want to re-scan after adjusting settings without waiting for a full re-analysis
 
-- Files already in cache are skipped  
-- Only new or modified files are analyzed  
-- Large directories can be re-scanned in seconds  
+With the cache enabled, a 10,000-file folder where 9,900 files haven't changed will rescan in seconds rather than hours.
 
-This is ideal for:
-
-- iPhone/Android photo sync folders  
-- NAS or cloud-synced directories  
-- Daily or weekly repeated scans  
-- Large collections where only a few files change over time
+**Leave the cache off when:**
+- You are doing a one-time scan of a folder you will not scan again
+- You scan different folders every time
+- You frequently change the detection threshold — the cache stores results computed at a specific threshold, so changed settings can make cached results inconsistent (see the Threshold section below)
+- You want to guarantee that every result is fresh
 
 ---
 
-# 🧩 MD5 Verification (Optional)
+## How Cache Validity Is Determined
 
-The cache system includes an optional integrity check:
+When scanning a file, NSFW Manager checks whether a valid cached result already exists. A result is considered valid if all of these match the stored record:
 
-### **Use MD5 verification**
-- Disabled by default  
-- When enabled, NSFW Manager computes an MD5 hash for each file  
-- Ensures cached results are valid and the file has not changed  
-- Slightly slower on repeated scans due to hashing overhead  
+1. **File path** — same location on disk
+2. **File size** — same byte count
+3. **Last modified time** — same modification timestamp
+4. **Engine** — same AI engine selected
+5. **Model variant** — same model (int8, fp16, onnx)
+6. **Detection threshold** — same threshold value
 
-Recommended when:
-
-- files may be edited or replaced  
-- external tools modify metadata  
-- users want strict accuracy for cached results
-
-Not recommended when:
-
-- scanning extremely large files  
-- prioritizing maximum speed over strict validation
+If all six match, the cached result is reused. If any one differs, the file is re-analyzed and the cache is updated.
 
 ---
 
-# 🗄 Cache Storage
+## MD5 Verification (Optional)
 
-The scan cache is stored in a local SQLite database under:
-%LOCALAPPDATA%\NsfwManager\scan_cache.db
+By default, the cache uses file size and modification time to detect changes. This is fast and sufficient for most workflows.
 
+**Enable MD5 verification** (Configuration → Cache → Use MD5 verification) to add a cryptographic content check on top of the standard validation.
 
-This location is:
+**Why you would want MD5:**
+- Cloud sync tools (Dropbox, OneDrive, iCloud Drive) sometimes update file modification timestamps when syncing without actually changing the file content. This would cause NSFW Manager to re-analyze files unnecessarily. With MD5, the actual content is verified, so unchanged files are correctly recognized as cached even if their timestamps were touched.
+- Conversely, some tools replace files with identical names and timestamps but different content. Without MD5, NSFW Manager would reuse the old cached result for new content. With MD5, the content change is detected and the file is re-analyzed.
 
-- user-writable  
-- safe for per-user MSI installations  
-- isolated from system directories  
-- compatible with roaming profiles (when applicable)
+**Why MD5 is off by default:**
+Computing an MD5 hash requires reading the entire file, even just to check the cache. For a collection of 10 GB of photos, this means reading 10 GB of data before any AI analysis even starts. For most users, modification time is a reliable enough indicator, and the overhead of MD5 is not justified.
 
----
-
-# 🔍 How NSFW Manager Determines Cache Validity
-
-When scanning a directory, NSFW Manager checks:
-
-1. **File path**  
-2. **File size**  
-3. **Last modified timestamp**  
-4. **MD5 hash** (only if enabled)  
-5. **Engine used**  
-
-If all conditions match the cached entry:
-
-- The cached score and reason are reused  
-- The file is skipped during analysis  
-- The scan continues to the next file
-
-If any condition differs:
-
-- The file is re-scanned normally  
-- The cache entry is updated
+**Use MD5 when:** you work with cloud-synced folders where files may have altered metadata, or when strict accuracy matters more than scan speed.
 
 ---
 
-# 🧹 Clearing the Cache
+## The Cache and Detection Threshold
 
-Users can clear the scan cache from the **Cache** tab in Settings.
+Cached results are stored together with the threshold value that was active when the file was analyzed. NSFW Manager automatically re-analyzes any file whose cached threshold no longer matches the current setting.
 
-Clearing the cache:
+This means that if you change your threshold from 0.50 to 0.40, every file in cache will be re-analyzed once — because the detection decision (flagged vs. safe) may have changed. After that first re-scan at the new threshold, subsequent scans benefit from the cache again.
 
-- removes all stored entries  
-- forces a full re-scan on the next run  
-- is useful if the database becomes large or corrupted  
-- does not affect quarantine or user settings
+You can also manually clear the entire cache at any time from **Configuration → Cache → Clear Cache**. This forces a fresh full analysis on the next scan.
 
 ---
 
-# 🛠 When to Enable the Scan Cache
+## Cache Statistics
 
-### Recommended
-- Frequently scanned directories  
-- Phone photo sync folders  
-- Large collections with few changes  
-- Daily or weekly scanning workflows  
-- Users who want maximum speed on repeated scans
-
-### Not Recommended
-- One-time scans  
-- Highly dynamic directories with constant file changes  
-- Environments where strict validation is required but MD5 is disabled
+The Configuration → Cache tab shows current cache statistics: the number of tracked files, the number of stored detection results, and the total size of the cache on disk. This lets you see at a glance how much the cache covers and how much space it uses.
 
 ---
 
-# 📁 Log Locations
+## Related Pages
 
-Cache-related events may appear in:
-%APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
-%LOCALAPPDATA%\NsfwManager\logs\startup.log
-%LOCALAPPDATA%\NsfwManager\logs\execution.log
-
-
-These logs help diagnose:
-
-- cache initialization  
-- database write errors  
-- MD5 verification failures  
-- fallback to normal scanning  
-
----
-
-# 📌 Summary
-
-The scan cache system provides:
-
-- dramatically faster repeated scans  
-- optional MD5 integrity verification  
-- safe per-user storage  
-- automatic detection of modified files  
-- seamless integration with all engines  
-
-When enabled, NSFW Manager becomes significantly more efficient for recurring workflows, especially in large or frequently updated directories.
-
----
-
-
-
+- [Detection Threshold](./detection-threshold.md) — why the threshold affects cache validity
+- [Video Support](./video-support.md) — video scan results are also cached
