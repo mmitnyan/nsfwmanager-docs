@@ -1,6 +1,8 @@
 # NSFW Manager — Documentation
 
-NSFW Manager is a Windows desktop application that scans, reviews, and manages files detected as potentially inappropriate content. All processing is local — no files are ever uploaded to external servers.
+**[NSFW Manager](https://www.nsfwmanager.com)** is a Windows desktop application that scans, reviews, and manages files detected as potentially inappropriate content. All processing is local — no files are ever uploaded to external servers.
+
+→ **[Download NSFW Manager](https://www.nsfwmanager.com/download)** · [Official Website](https://www.nsfwmanager.com) · [FAQ](https://www.nsfwmanager.com/faq)
 
 ## Features
 
