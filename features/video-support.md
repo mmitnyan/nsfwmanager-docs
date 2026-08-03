@@ -104,6 +104,7 @@ If you only need to scan images, you can disable video scanning in Configuration
 
 ## Related Pages
 
+- [Video Decoding Errors](../troubleshooting/video-decoding-errors.md) — diagnosing and fixing frame extraction failures
 - [Photo Support](./photo-support.md) — image formats and behavior
 - [Scan Cache](./scan-cache.md) — how results are stored and reused
 - [Detection Threshold](./detection-threshold.md) — how the threshold applies to video scores

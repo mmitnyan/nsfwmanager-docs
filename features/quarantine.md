@@ -120,7 +120,8 @@ You can send files to quarantine from multiple places:
 
 ## Related Pages
 
+- [Quarantine Manager](../ui/quarantine-manager.md) — the dialog for reviewing, restoring, and deleting sessions
 - [Move to Folder](./move-to-folder.md) — for one-way moves without structured metadata
 - [Delete](./delete.md) — for permanent or Recycle Bin removal
 - [Detection Threshold](./detection-threshold.md) — for adjusting what gets flagged in the first place
-
+

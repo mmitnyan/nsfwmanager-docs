@@ -32,13 +32,13 @@ For animated GIF and animated WebP files, NSFW Manager analyzes only the **first
 
 ## HEIC, HEIF, and AVIF (Apple Device Formats)
 
-HEIC, HEIF, and AVIF are modern compressed image formats used by iPhones, iPads, and recent Android cameras. These formats require an **optional plugin** (`pillow-heif`) that is not included by default.
+HEIC, HEIF, and AVIF are modern compressed image formats used by iPhones, iPads, and recent Android cameras.
 
-If the plugin is not installed, these file types are skipped silently during scans. The Configuration → Detection panel shows "(pillow-heif not installed)" next to these formats if the plugin is absent.
+**MSI installer:** The required plugin (`pillow-heif`) is bundled with the installer. No additional installation is needed. Enable `.heic`, `.heif`, and `.avif` in **Configuration → Directories → Image Formats** and they will be scanned immediately.
 
-**Why the plugin is optional:** The codec required to decode Apple's HEIC/HEIF format is not distributed as part of standard Python imaging libraries. Users who regularly work with iPhone photo libraries can install the plugin separately; users who never encounter these formats have no need for it.
+**Running from source:** `pillow-heif` must be installed manually (`pip install pillow-heif`). If it is absent, these formats are skipped silently — files are not scanned and no error is reported.
 
-**How to enable it:** Install the plugin via your Python environment. Once installed, HEIC/HEIF/AVIF detection becomes available automatically without any application restart.
+See [HEIC, HEIF, and AVIF Support](../troubleshooting/heic-heif-avif.md) for common issues with these formats.
 
 ---
 
