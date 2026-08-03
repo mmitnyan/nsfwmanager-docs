@@ -137,6 +137,7 @@ Why this tab exists: When filing a bug report or troubleshooting a performance i
 
 ## Related Pages
 
+- [Licence Management Panel](./licence-panel.md) — activating and reviewing your licence
 - [Detection Engines](../architecture/engine.md) — engine details and selection guide
 - [Detection Threshold](../features/detection-threshold.md) — threshold tuning guide
 - [Scan Cache](../features/scan-cache.md) — cache configuration guide
