@@ -61,3 +61,5 @@
 ## Contributing to the Docs
 
 All documentation is written in Markdown. To suggest a change, open a pull request against this repository with your proposed edits.
+
+**Repository:** [mmitnyan/nsfwmanager-docs](https://github.com/mmitnyan/nsfwmanager-docs) — Technical and user documentation for NSFW Manager (Windows). Guides, architecture, FAQ and release notes.
