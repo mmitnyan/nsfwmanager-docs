@@ -41,7 +41,7 @@ Different engines distribute scores differently. This affects how you should set
 
 **The Rebel (ifnude):** Anatomically focused — it detects body parts rather than inferred scene type. It reliably flags exposed anatomy regardless of artistic or medical context. False positives are lower for normal photos but higher for art, sculpture, and medical content.
 
-See [Detection Threshold](./detection-threshold.md) for a full guide on score interpretation and threshold selection.
+See [Detection Threshold](../features/detection-threshold.md) for a full guide on score interpretation and threshold selection.
 
 ---
 

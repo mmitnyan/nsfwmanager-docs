@@ -92,7 +92,7 @@ Understanding how each engine distributes scores helps you choose the right thre
 
 **The Rebel (ifnude):** Scores are distributed across the full range. Many files will score between 0.40 and 0.80. Here, the threshold makes a significant difference — moving it from 0.50 to 0.60 may exclude a meaningful category of content.
 
-See [Detection Threshold](./detection-threshold.md) for guidance on tuning.
+See [Detection Threshold](../features/detection-threshold.md) for guidance on tuning.
 
 ---
 
@@ -112,6 +112,6 @@ Model files are stored in your user profile. Once downloaded, they are available
 
 ## Related Pages
 
-- [Detection Threshold](./detection-threshold.md) — how to tune sensitivity per engine
+- [Detection Threshold](../features/detection-threshold.md) — how to tune sensitivity per engine
 - [GPU Acceleration](../troubleshooting/performance.md#gpu) — when GPU helps and when it does not
 - [Diagnostics](../ui/ConfigurationPanel.md#diagnostic-tab) — checking which engine and GPU are active
