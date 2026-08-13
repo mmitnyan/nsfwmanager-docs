@@ -27,13 +27,13 @@
 
 | Section | Description |
 |---|---|
-| [Getting Started](getting-started/) | Installation, first scan, licence activation, and upgrading |
-| [Features](features/) | In-depth guides for every feature including WHY each option exists |
-| [Architecture](architecture/) | How NSFW Manager works under the hood (user-facing explanations) |
-| [UI Reference](ui/) | Main screen, Properties Panel, Configuration Panel, Licence Panel, and Quarantine Manager |
-| [Security](security/) | Licence security, privacy, and SSL communication |
-| [Troubleshooting](troubleshooting/) | False positives, HEIC/AVIF support, video decoding errors, and performance tuning |
-| [Changelog](changelog/) | Release notes for each version |
+| [Getting Started](getting-started/installation.md) | Installation, first scan, licence activation, and upgrading |
+| [Features](features/detection-threshold.md) | In-depth guides for every feature including WHY each option exists |
+| [Architecture](architecture/overview.md) | How NSFW Manager works under the hood (user-facing explanations) |
+| [UI Reference](ui/main-screen.md) | Main screen, Properties Panel, Configuration Panel, Licence Panel, and Quarantine Manager |
+| [Security](security/licence-security.md) | Licence security, privacy, and SSL communication |
+| [Troubleshooting](troubleshooting/performance.md) | False positives, HEIC/AVIF support, video decoding errors, and performance tuning |
+| [Changelog](changelog/release-history.md) | Release notes for each version |
 
 ## Quick Links
 
