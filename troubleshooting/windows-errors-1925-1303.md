@@ -17,7 +17,7 @@ These errors typically appear in the MSI log during the **InstallFinalize** phas
 
 ---
 
-# 🔍 Error 1925 — Insufficient Privileges
+## 🔍 Error 1925 — Insufficient Privileges
 
 ### **Log Example**
 Error 1925. You do not have sufficient privileges to complete this installation for all users of the machine.
@@ -44,7 +44,7 @@ In this situation, Windows Installer attempts to perform privileged actions with
 
 ---
 
-# 🔍 Error 1303 — Insufficient Permissions to Write to Directory
+## 🔍 Error 1303 — Insufficient Permissions to Write to Directory
 
 ### **Log Example**
 
@@ -70,7 +70,7 @@ If the MSI is not elevated, Windows denies access.
 
 ---
 
-# 🔥 Why These Errors Happened in Early Versions of NSFW Manager
+## 🔥 Why These Errors Happened in Early Versions of NSFW Manager
 
 Earlier MSI builds were configured as:
 
@@ -89,7 +89,7 @@ As a result:
 
 ---
 
-# 🟩 Final Fix Implemented in NSFW Manager
+## 🟩 Final Fix Implemented in NSFW Manager
 
 NSFW Manager now uses a **per-user MSI**, which installs into:
 
@@ -108,7 +108,7 @@ This eliminates errors **1925**, **1303**, and the resulting **1603**.
 
 ---
 
-# 🧪 How to Verify the Fix
+## 🧪 How to Verify the Fix
 
 ### Silent install command:
 msiexec /i nsfwmanager.msi /quiet /L*V install.log
@@ -126,7 +126,7 @@ msiexec /i nsfwmanager.msi /quiet /L*V install.log
 
 ---
 
-# 📁 Log Locations for Troubleshooting
+## 📁 Log Locations for Troubleshooting
 
 If installation issues occur, check:
 %APPDATA%\Roaming\NsfwManager\logs\NsfwManager.log
@@ -143,7 +143,7 @@ These logs help identify:
 
 ---
 
-# 📌 Summary
+## 📌 Summary
 
 Errors **1925** and **1303** are caused by Windows Installer attempting privileged operations without elevation.  
 By switching NSFW Manager to a **per-user MSI**, all privileged operations were removed, making installation:

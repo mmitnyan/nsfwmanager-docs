@@ -91,7 +91,7 @@ For any scanned image, the [Properties Panel](../ui/properties-panel.md) shows t
 
 ---
 
-# 🧩 Cache Integration
+## 🧩 Cache Integration
 
 Image detection results are stored in SQLite:
 
@@ -114,7 +114,7 @@ Related documentation:
 
 ---
 
-# 🗂 Quarantine & Delete Integration
+## 🗂 Quarantine & Delete Integration
 
 Image support integrates with:
 - Quarantine  
@@ -129,7 +129,7 @@ Related documentation:
 
 ---
 
-# 📦 Version History
+## 📦 Version History
 
 ### v2.0.3
 - MD5 strict mode  
@@ -156,7 +156,7 @@ Related documentation:
 
 ---
 
-# 📌 Summary
+## 📌 Summary
 
 NSFW Manager provides one of the most complete image detection pipelines available:
 
