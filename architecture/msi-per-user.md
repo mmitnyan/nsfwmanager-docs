@@ -1,4 +1,4 @@
-# Installation Model: No Administrator Rights Required
+# Per-User MSI: No Admin Rights Required
 ## How NSFW Manager Installs Cleanly on Any Windows User Account
 
 NSFW Manager uses a **per-user MSI** installer. This means the entire installation happens inside your own user profile — no system-wide changes, no administrator access needed, no UAC prompt.
