@@ -12,6 +12,7 @@ The agreement defines your rights and restrictions as a user of NSFW Manager. It
 - **Permitted uses** — what you may do with the software on your own files
 - **Restrictions** — what you may not do (redistribution, reverse engineering, bypassing licence controls)
 - **Intellectual property** — ownership of the software and bundled AI models
+- **Anonymous telemetry disclosure** — what is sent to our server during trial/unlicensed use, and how it stops once a paid licence is activated (Section 9)
 - **Liability disclaimer** — limitations on warranty and damages
 - **Governing law** — the jurisdiction applicable to disputes
 
@@ -52,3 +53,4 @@ This file is installed alongside the application and can be read with any text e
 - [Open Source Notices](./open-source-notices.md) — third-party component licences
 - [Licence and Activation](../getting-started/licence.md) — trial vs paid licensing
 - [Licence Security](../security/licence-security.md) — how licence enforcement works
+- [Privacy](../security/privacy.md) — full detail on the anonymous telemetry ping

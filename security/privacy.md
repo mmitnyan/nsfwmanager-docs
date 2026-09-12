@@ -21,19 +21,24 @@ NSFW Manager is designed with a strict privacy-first approach. Every step of the
 
 ## What Is Not Collected
 
-NSFW Manager collects **no usage data** of any kind:
+NSFW Manager collects no usage data tied to your files or activity:
 
 - No analytics or crash reports
 - No file names, file paths, or folder structures
 - No detection results or scores
 - No information about what you scan or how often you use the application
-- No hardware telemetry beyond the hashed machine ID used for licence binding
+
+The only exception is the minimal anonymous startup ping described below, which is sent solely while the application is used in trial or unlicensed mode and stops permanently once a paid licence is activated.
 
 ---
 
-## The Only Outbound Network Request
+## Outbound Network Requests
 
-The single network request NSFW Manager makes is **licence validation at startup**.
+NSFW Manager makes two possible outbound network requests, depending on your licence status.
+
+### Licence Validation (Always, at Startup)
+
+The application sends a licence validation request every time it starts, regardless of licence status.
 
 This request sends:
 - Your email address and licence key
@@ -43,9 +48,22 @@ This request sends:
 This request is:
 - Sent over HTTPS (TLS 1.2 or higher)
 - Signed with HMAC-SHA256 to prevent tampering
-- The only time any data leaves your machine
 
 **What is never sent in this request:** file names, file content, folder paths, detection scores, scan history, or any information about what you have scanned.
+
+### Anonymous Telemetry Ping (Trial / Unlicensed Use Only)
+
+As long as NSFW Manager is used **without an active paid licence** (trial or unlicensed use), the application also sends a minimal anonymous ping to `api.nsfwmanager.com` each time it starts. The ping is fire-and-forget, sent in the background with a 5-second timeout, and fails silently if it cannot reach the server.
+
+This ping contains only:
+- A one-way SHA-256 hash of a random identifier generated locally on first launch (the raw identifier is never transmitted and cannot be reversed to identify you or your machine)
+- The application version
+- Your Windows version (10 or 11)
+- Your licence tier (always "trial", since this ping is only ever sent for unlicensed use)
+
+No file, filename, folder path, scan result, detection score, or personal data is ever included in this ping.
+
+**This telemetry stops automatically as soon as a valid paid licence is activated on the machine.**
 
 ---
 
@@ -63,7 +81,7 @@ When you choose to download an optional engine model (The Laid-Back One fp16 or 
 
 Scanning for sensitive content is inherently personal. A cloud-based scanning service would require uploading your images to a third-party server, where they might be logged, reviewed by staff, used for model training, or subject to data breach risk.
 
-NSFW Manager avoids all of these risks by keeping everything local. The AI model is on your machine. The results stay on your machine. The only thing that leaves is a licence key verification handshake.
+NSFW Manager avoids all of these risks by keeping everything local. The AI model is on your machine. The results stay on your machine. The only things that ever leave your machine are the licence key verification handshake and, while unlicensed, the minimal anonymous telemetry ping described above.
 
 ---
 

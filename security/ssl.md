@@ -1,7 +1,9 @@
 # SSL and Secure Licence Validation
-## How NSFW Manager Protects Its One Network Request
+## How NSFW Manager Protects Its Network Requests
 
-NSFW Manager makes a single outbound network request: licence validation at startup. This page explains how that request is secured.
+NSFW Manager's primary outbound network request is licence validation at startup. This page explains how that request is secured.
+
+While the application is used without an active paid licence, a separate minimal anonymous telemetry ping is also sent over HTTPS at startup — see [Privacy](./privacy.md) for exactly what it contains. That ping is fire-and-forget and unrelated to the HMAC-signed licence validation described on this page.
 
 ---
 

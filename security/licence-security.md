@@ -16,7 +16,7 @@ When NSFW Manager starts, it sends a validation request to the licence server at
 
 The server checks that the key is valid, active, not expired, and bound to the correct machine. It returns the licence status and expiry date.
 
-This request is the **only** outbound network connection NSFW Manager makes. No file names, file content, scan results, or folder paths are ever transmitted.
+No file names, file content, scan results, or folder paths are ever transmitted in this request. While using NSFW Manager without an active paid licence, a separate minimal anonymous telemetry ping is also sent at startup — see [Privacy](./privacy.md#anonymous-telemetry-ping-trial--unlicensed-use-only) for exactly what it contains.
 
 ---
 
@@ -62,6 +62,8 @@ When no valid licence is present, NSFW Manager operates in **trial (demo) mode**
 - File actions (delete, move, quarantine, open directory) are limited to **5 per session**
 - Once the limit is reached, action buttons are greyed out until the next application restart
 - The counter resets on every launch
+
+**Trial mode also sends:** a minimal anonymous telemetry ping at each startup (hashed random ID, app version, Windows version, licence tier). See [Privacy](./privacy.md) for details. This stops as soon as a paid licence is activated.
 
 ---
 

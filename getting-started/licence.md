@@ -24,6 +24,8 @@ When no valid licence is present, NSFW Manager operates in **trial mode**.
 
 **Scanning is never limited:** You can scan folders of any size in trial mode. The limitation is only on what you can do with the results.
 
+**Anonymous telemetry while in trial:** As long as no active paid licence is present, NSFW Manager also sends a minimal anonymous ping at each startup — a hashed random ID, the app version, your Windows version, and your licence tier (always "trial"). No files, filenames, or personal data are ever included. This stops automatically once you activate a paid licence. See [Privacy](../security/privacy.md) for full details.
+
 ---
 
 ## Paid Licence

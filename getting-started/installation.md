@@ -63,7 +63,7 @@ After installation, find NSFW Manager in your Start Menu under NsfwManager. On f
 
 NSFW Manager is distributed as a code-signed MSI. If your antivirus flags it, this is a false positive from the AI detection model files bundled with the installer (AI model weights sometimes trigger heuristic malware scanners). You can safely whitelist the installer and the application.
 
-NSFW Manager does not connect to the internet except for licence validation at startup. No files are uploaded. No telemetry is collected.
+NSFW Manager connects to the internet for licence validation at startup, and — while used without an active paid licence — also sends a minimal anonymous telemetry ping (no files, filenames, or personal data; see [Privacy](../security/privacy.md)). No files are ever uploaded.
 
 ---
 

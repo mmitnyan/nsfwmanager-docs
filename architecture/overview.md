@@ -69,7 +69,7 @@ After the scan completes, the progress bar is replaced by the total scan duratio
 
 ## Design Principles
 
-**Local only:** Every step described above happens on your machine. No file content, no detection results, no metadata leaves your computer. The only network activity is licence validation at startup.
+**Local only:** Every step described above happens on your machine. No file content, no detection results, no metadata leaves your computer. The only network activity is licence validation at startup, plus — while used without an active paid licence — a minimal anonymous telemetry ping (see [Privacy](../security/privacy.md)).
 
 **CPU-first by default:** GPU acceleration is optional for both image and video processing. The default is CPU-only, which works on every Windows machine and avoids driver compatibility issues. GPU can be enabled in Configuration → Engines for faster processing when supported hardware is available.
 
